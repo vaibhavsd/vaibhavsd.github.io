@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<!-- ═══════════════════════════════════════════════════════════════════
+     CERTIFICATIONS PAGE
+     Grouped by topic. Each certificate is one <figure class="cert"> whose
+     thumbnail links to a matching .lightbox block at the bottom of the page
+     (pure CSS, no JavaScript — the lightbox opens on :target).
+
+     TO ADD A CERTIFICATE:
+       1. drop the screenshot in assets/img/certificates/<slug>.webp
+       2. copy a <figure class="cert"> into the right topic grid
+       3. copy a matching <div class="lightbox" id="lb-<slug>"> at the bottom
+          — the id must match the figure's href, and its close links should
+          point at that topic's section id
+       4. bump the "N courses" count in that topic's heading
+     TO ADD A TOPIC: copy a whole <div class="cert-topic">, give it an id, and
+     add a chip for it in the hero and in index.html's Certifications section.
+     ═══════════════════════════════════════════════════════════════════ -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Online certifications — Vaibhav Deshmukh</title>
+<meta name="description" content="Online coursework completed by Vaibhav Deshmukh — machine learning, ADAS, C++, car modelling, robotics and embedded systems, with certificates." />
+<meta name="author" content="Vaibhav Deshmukh" />
+
+<meta property="og:title" content="Online certifications — Vaibhav Deshmukh" />
+<meta property="og:description" content="Online coursework in machine learning, ADAS, C++, car modelling, robotics and embedded systems." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://vaibhavsd.github.io/certifications.html" />
+
+<link rel="stylesheet" href="./assets/css/style.css" />
+</head>
+<body>
+
+<nav class="site subpage">
+  <div class="wrap">
+    <a class="brand" href="./index.html">vaibhav&nbsp;deshmukh</a>
+    <a class="link keep back" href="./index.html#certifications">←&nbsp;Back to site</a>
+    <span class="sep" aria-hidden="true"></span>
+    <a class="link" href="./index.html#experience">Experience</a>
+    <a class="link" href="./index.html#projects">Projects</a>
+    <a class="link" href="./index.html#contact">Contact</a>
+  </div>
+</nav>
+
+<header class="hero subpage" id="top">
+  <div class="wrap">
+    <nav class="crumb" aria-label="Breadcrumb">
+      <a href="./index.html">Home</a>
+      <span class="divider" aria-hidden="true">/</span>
+      <span class="here">Certifications</span>
+    </nav>
+
+    <p class="eyebrow">Online coursework</p>
+    <h1>Certifications</h1>
+    <p class="lede">
+      Courses I have taken outside of work to go deeper on the topics my day job touches —
+      grouped by subject. Click any certificate to see it full size; every entry links to
+      the issuer's verification page.
+    </p>
+    <div class="chip-row">
+      <a class="chip" href="#machine-learning">Machine Learning</a>
+      <a class="chip" href="#adas">ADAS</a>
+      <a class="chip" href="#cpp">C++</a>
+      <a class="chip" href="#car-modelling">Car Modelling</a>
+      <a class="chip" href="#robotics">Robotics</a>
+      <a class="chip" href="#embedded-systems">Embedded Systems</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <div class="wrap">
+    <h2>Certificates by topic</h2>
+
+    <!-- ══════════ MACHINE LEARNING ══════════ -->
+    <div class="cert-topic" id="machine-learning">
+      <div class="topic-head">
+        <h3>Machine Learning</h3>
+        <span class="count">2 courses</span>
+      </div>
+      <div class="cert-grid">
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-supervised-machine-learning">
+            <img src="./assets/img/certificates/supervised-machine-learning.webp"
+                 alt="Coursera certificate — Supervised Machine Learning: Regression and Classification"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">Supervised Machine Learning: Regression and Classification</p>
+            <p class="c-meta">
+              DeepLearning.AI &amp; Stanford Online · Coursera
+              <span class="c-date">Oct 2025</span>
+            </p>
+            <a class="c-verify" href="https://coursera.org/verify/JT7XSCXYK4VF"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-advanced-learning-algorithms">
+            <img src="./assets/img/certificates/advanced-learning-algorithms.webp"
+                 alt="Coursera certificate — Advanced Learning Algorithms"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">Advanced Learning Algorithms</p>
+            <p class="c-meta">
+              DeepLearning.AI &amp; Stanford Online · Coursera
+              <span class="c-date">Oct 2025</span>
+            </p>
+            <a class="c-verify" href="https://coursera.org/verify/HAYRAGYRGSRO"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+      </div>
+    </div>
+
+    <!-- ══════════ ADAS ══════════ -->
+    <div class="cert-topic" id="adas">
+      <div class="topic-head">
+        <h3>ADAS &amp; Vehicle Networks</h3>
+        <span class="count">1 course</span>
+      </div>
+      <div class="cert-grid">
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-vehicle-can-bus">
+            <img src="./assets/img/certificates/vehicle-can-bus.webp"
+                 alt="Udemy certificate — An Introduction to the Controller Area Network (CAN) Bus"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">An Introduction to the Controller Area Network (CAN) Bus</p>
+            <p class="c-meta">
+              Udemy · Emile Ackbarali
+              <span class="c-date">Feb 2021</span>
+            </p>
+            <a class="c-verify" href="https://ude.my/UC-3e282822-c6b6-4666-aada-2b87f12f2e63"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+      </div>
+    </div>
+
+    <!-- ══════════ C++ ══════════ -->
+    <div class="cert-topic" id="cpp">
+      <div class="topic-head">
+        <h3>C++</h3>
+        <span class="count">3 courses</span>
+      </div>
+      <div class="cert-grid">
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-foundations-of-modern-cpp">
+            <img src="./assets/img/certificates/foundations-of-modern-cpp.webp"
+                 alt="Coursera certificate — Foundations of Modern C++"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">Foundations of Modern C++</p>
+            <p class="c-meta">
+              Packt · Coursera
+              <span class="c-date">Nov 2025</span>
+            </p>
+            <a class="c-verify" href="https://coursera.org/verify/TXLW9XRJ3MV2"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-data-structures-in-cpp">
+            <img src="./assets/img/certificates/data-structures-in-cpp.webp"
+                 alt="Coding Ninjas certificate — Data Structures in C++"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">Data Structures in C++</p>
+            <p class="c-meta">
+              Coding Ninjas
+              <span class="c-date">Sep – Dec 2022</span>
+            </p>
+            <a class="c-verify" href="https://certificate.codingninjas.com/verify/925acf1155e55514"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-intro-to-cpp">
+            <img src="./assets/img/certificates/intro-to-cpp.webp"
+                 alt="Coding Ninjas certificate — Introduction to C++"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">Introduction to C++</p>
+            <p class="c-meta">
+              Coding Ninjas
+              <span class="c-date">Aug – Sep 2022</span>
+            </p>
+            <a class="c-verify" href="https://certificate.codingninjas.com/verify/f3db9d808c19d266"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+      </div>
+    </div>
+
+    <!-- ══════════ CAR MODELLING ══════════ -->
+    <div class="cert-topic" id="car-modelling">
+      <div class="topic-head">
+        <h3>Car Modelling</h3>
+        <span class="count">1 course</span>
+      </div>
+      <div class="cert-grid">
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-car-modelling-pid-controller">
+            <img src="./assets/img/certificates/car-modelling-pid-controller.webp"
+                 alt="Udemy certificate — Model a Car and Design a PID Controller in MATLAB/Simulink"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">Model a Car and Design a PID Controller in MATLAB/Simulink</p>
+            <p class="c-meta">
+              Udemy · Eliott Wertheimer
+              <span class="c-date">Feb 2021</span>
+            </p>
+            <a class="c-verify" href="https://ude.my/UC-e4f59cee-df14-4217-9d74-115d28b22ee3"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+      </div>
+    </div>
+
+    <!-- ══════════ ROBOTICS ══════════ -->
+    <div class="cert-topic" id="robotics">
+      <div class="topic-head">
+        <h3>Robotics</h3>
+        <span class="count">3 courses</span>
+      </div>
+      <div class="cert-grid">
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-robotics-perception">
+            <img src="./assets/img/certificates/robotics-perception.webp"
+                 alt="Coursera certificate — Robotics: Perception, University of Pennsylvania"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">Robotics: Perception</p>
+            <p class="c-meta">
+              University of Pennsylvania · Coursera
+              <span class="c-date">Nov 2016</span>
+            </p>
+            <a class="c-verify" href="https://coursera.org/verify/MZVEW4QP3T4P"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-robotics-estimation-and-learning">
+            <img src="./assets/img/certificates/robotics-estimation-and-learning.webp"
+                 alt="Coursera certificate — Robotics: Estimation and Learning, University of Pennsylvania"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">Robotics: Estimation and Learning</p>
+            <p class="c-meta">
+              University of Pennsylvania · Coursera
+              <span class="c-date">Sep 2016</span>
+            </p>
+            <a class="c-verify" href="https://coursera.org/verify/AG6HFPVSL3RE"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-robotics-computational-motion-planning">
+            <img src="./assets/img/certificates/robotics-computational-motion-planning.webp"
+                 alt="Coursera certificate — Robotics: Computational Motion Planning, University of Pennsylvania"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">Robotics: Computational Motion Planning</p>
+            <p class="c-meta">
+              University of Pennsylvania · Coursera
+              <span class="c-date">Jun 2016</span>
+            </p>
+            <a class="c-verify" href="https://coursera.org/verify/9JGHDZW6EM3S"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+      </div>
+    </div>
+
+    <!-- ══════════ EMBEDDED SYSTEMS ══════════ -->
+    <div class="cert-topic" id="embedded-systems">
+      <div class="topic-head">
+        <h3>Embedded Systems</h3>
+        <span class="count">1 course</span>
+      </div>
+      <div class="cert-grid">
+
+        <figure class="cert">
+          <a class="cert-shot" href="#lb-embedded-systems-shape-the-world">
+            <img src="./assets/img/certificates/embedded-systems-shape-the-world.webp"
+                 alt="edX certificate — 6.02x Embedded Systems: Shape the World, UT Austin"
+                 loading="lazy" decoding="async" />
+            <span class="zoom">⤢ View certificate</span>
+          </a>
+          <figcaption>
+            <p class="c-title">6.02x: Embedded Systems — Shape the World</p>
+            <p class="c-meta">
+              UTAustinX · edX
+              <span class="c-date">May 2015</span>
+            </p>
+            <a class="c-verify" href="https://verify.edx.org/cert/87257b9d151742ffb8d3536811e79338"
+               target="_blank" rel="noopener">Verify ↗</a>
+          </figcaption>
+        </figure>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="page-end">
+      <a class="btn" href="./index.html#certifications">← Back to site</a>
+      <a class="btn" href="./index.html#projects">Projects</a>
+      <a class="btn" href="./assets/Vaibhav_Deshmukh_Resume.pdf" target="_blank" rel="noopener">Résumé (PDF)</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════
+     LIGHTBOXES — hidden until their id is the URL fragment.
+     Close links point back at the topic section so the reader lands
+     where they were instead of at the top of the page.
+     ══════════════════════════════════════════════════════════════ -->
+
+<div class="lightbox" id="lb-supervised-machine-learning">
+  <a class="lb-backdrop" href="#machine-learning" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/supervised-machine-learning.webp"
+         alt="Coursera certificate — Supervised Machine Learning: Regression and Classification" />
+    <div class="lb-bar">
+      <p class="lb-cap">Supervised Machine Learning · Coursera · Oct 2025</p>
+      <a class="btn" href="./assets/img/certificates/supervised-machine-learning.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#machine-learning">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lb-advanced-learning-algorithms">
+  <a class="lb-backdrop" href="#machine-learning" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/advanced-learning-algorithms.webp"
+         alt="Coursera certificate — Advanced Learning Algorithms" />
+    <div class="lb-bar">
+      <p class="lb-cap">Advanced Learning Algorithms · DeepLearning.AI &amp; Stanford Online / Coursera · Oct 2025</p>
+      <a class="btn" href="./assets/img/certificates/advanced-learning-algorithms.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#machine-learning">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lb-vehicle-can-bus">
+  <a class="lb-backdrop" href="#adas" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/vehicle-can-bus.webp"
+         alt="Udemy certificate — An Introduction to the Controller Area Network (CAN) Bus" />
+    <div class="lb-bar">
+      <p class="lb-cap">Controller Area Network (CAN) Bus · Udemy · Feb 2021</p>
+      <a class="btn" href="./assets/img/certificates/vehicle-can-bus.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#adas">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lb-foundations-of-modern-cpp">
+  <a class="lb-backdrop" href="#cpp" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/foundations-of-modern-cpp.webp"
+         alt="Coursera certificate — Foundations of Modern C++" />
+    <div class="lb-bar">
+      <p class="lb-cap">Foundations of Modern C++ · Packt / Coursera · Nov 2025</p>
+      <a class="btn" href="./assets/img/certificates/foundations-of-modern-cpp.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#cpp">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lb-data-structures-in-cpp">
+  <a class="lb-backdrop" href="#cpp" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/data-structures-in-cpp.webp"
+         alt="Coding Ninjas certificate — Data Structures in C++" />
+    <div class="lb-bar">
+      <p class="lb-cap">Data Structures in C++ · Coding Ninjas · 2022</p>
+      <a class="btn" href="./assets/img/certificates/data-structures-in-cpp.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#cpp">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lb-intro-to-cpp">
+  <a class="lb-backdrop" href="#cpp" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/intro-to-cpp.webp"
+         alt="Coding Ninjas certificate — Introduction to C++" />
+    <div class="lb-bar">
+      <p class="lb-cap">Introduction to C++ · Coding Ninjas · 2022</p>
+      <a class="btn" href="./assets/img/certificates/intro-to-cpp.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#cpp">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lb-car-modelling-pid-controller">
+  <a class="lb-backdrop" href="#car-modelling" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/car-modelling-pid-controller.webp"
+         alt="Udemy certificate — Model a Car and Design a PID Controller in MATLAB/Simulink" />
+    <div class="lb-bar">
+      <p class="lb-cap">Model a Car and Design a PID Controller · Udemy · Feb 2021</p>
+      <a class="btn" href="./assets/img/certificates/car-modelling-pid-controller.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#car-modelling">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lb-robotics-perception">
+  <a class="lb-backdrop" href="#robotics" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/robotics-perception.webp"
+         alt="Coursera certificate — Robotics: Perception, University of Pennsylvania" />
+    <div class="lb-bar">
+      <p class="lb-cap">Robotics: Perception · UPenn / Coursera · Nov 2016</p>
+      <a class="btn" href="./assets/img/certificates/robotics-perception.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#robotics">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lb-robotics-estimation-and-learning">
+  <a class="lb-backdrop" href="#robotics" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/robotics-estimation-and-learning.webp"
+         alt="Coursera certificate — Robotics: Estimation and Learning, University of Pennsylvania" />
+    <div class="lb-bar">
+      <p class="lb-cap">Robotics: Estimation and Learning · UPenn / Coursera · Sep 2016</p>
+      <a class="btn" href="./assets/img/certificates/robotics-estimation-and-learning.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#robotics">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lb-robotics-computational-motion-planning">
+  <a class="lb-backdrop" href="#robotics" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/robotics-computational-motion-planning.webp"
+         alt="Coursera certificate — Robotics: Computational Motion Planning, University of Pennsylvania" />
+    <div class="lb-bar">
+      <p class="lb-cap">Robotics: Computational Motion Planning · UPenn / Coursera · Jun 2016</p>
+      <a class="btn" href="./assets/img/certificates/robotics-computational-motion-planning.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#robotics">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lb-embedded-systems-shape-the-world">
+  <a class="lb-backdrop" href="#embedded-systems" aria-label="Close"></a>
+  <div class="lb-inner">
+    <img src="./assets/img/certificates/embedded-systems-shape-the-world.webp"
+         alt="edX certificate — 6.02x Embedded Systems: Shape the World, UT Austin" />
+    <div class="lb-bar">
+      <p class="lb-cap">6.02x Embedded Systems — Shape the World · UTAustinX / edX · May 2015</p>
+      <a class="btn" href="./assets/img/certificates/embedded-systems-shape-the-world.webp" target="_blank" rel="noopener">Open image</a>
+      <a class="btn primary" href="#embedded-systems">Close ✕</a>
+    </div>
+  </div>
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    © 2026 Vaibhav Deshmukh · <a href="./index.html">Home</a> ·
+    <a href="./assets/Vaibhav_Deshmukh_Resume.pdf" target="_blank" rel="noopener">Résumé</a>
+  </div>
+</footer>
+
+</body>
+</html>
