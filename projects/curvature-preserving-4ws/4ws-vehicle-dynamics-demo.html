@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Curvature-Preserving 4WS Demo</title>
+</head>
+<body>
+
+<h1>Curvature-Preserving 4-Wheel Steering — Demo</h1>
+<p>
+  Legend:
+  <span style="color:gray">■ Intended path (2WS reference, dashed)</span> &nbsp;
+  <span style="color:red">■ Uncorrected (dotted)</span> &nbsp;
+  <span style="color:teal">■ Corrected (solid)</span>
+</p>
+
+<canvas id="plot" width="700" height="500" style="border:1px solid #999; background:#fafafa;"></canvas>
+
+<table cellpadding="4">
+  <tr>
+    <td><label for="deltaCmd">Controller's Intended Front Angle (deg):</label></td>
+    <td><input type="range" id="deltaCmd" min="-30" max="30" step="0.5" value="15"></td>
+    <td><span id="deltaCmdVal">15</span>°</td>
+  </tr>
+  <tr>
+    <td><label for="speed">Vehicle Speed (km/h):</label></td>
+    <td><input type="range" id="speed" min="5" max="130" step="1" value="30"></td>
+    <td><span id="speedVal">30</span> km/h</td>
+  </tr>
+</table>
+
+<table border="1" cellpadding="6" style="border-collapse:collapse; margin-top:12px;">
+  <tr><td>Intended radius (reference)</td><td id="statRefR"></td></tr>
+  <tr><td>Uncorrected radius</td><td id="statUncR"></td></tr>
+  <tr><td>Path error, uncorrected</td><td id="statUncErr"></td></tr>
+  <tr><td>Corrected front angle δf</td><td id="statDf"></td></tr>
+  <tr><td>Resulting rear angle δr</td><td id="statDr"></td></tr>
+  <tr><td>Corrected radius</td><td id="statCorR"></td></tr>
+  <tr><td>Path error, corrected</td><td id="statCorErr"></td></tr>
+  <tr><td>Mode</td><td id="statMode"></td></tr>
+</table>
+
+<p>
+  <button id="reset">Reset to Defaults</button>
+</p>
+
+<p><small>Wheelbase L = 2.8 m, arc length shown = 35 m, rear-steer ratio k(v) = -0.5*(1 - v/60) clamped to [-0.5, 0.15].</small></p>
+
+<script>
+// ---------------- physics ----------------
+const L = 2.8;        // wheelbase, meters
+const ARC_LEN = 35;   // meters of path drawn
+const SAMPLES = 160;
+
+function kOfV(vKmh){
+  const k = -0.5 * (1 - vKmh/60);
+  return Math.max(-0.5, Math.min(0.15, k));
+}
+function deg2rad(d){ return d * Math.PI/180; }
+function rad2deg(r){ return r * 180/Math.PI; }
+
+// solve tan(df) - tan(k*df) = tan(deltaCmd) for df, via bisection
+function solveCorrectedFront(deltaCmdRad, k){
+  const target = Math.tan(deltaCmdRad);
+  function f(df){ return Math.tan(df) - Math.tan(k*df) - target; }
+  if (deltaCmdRad === 0) return 0;
+  let lo = deltaCmdRad < 0 ? -1.45 : 0;
+  let hi = deltaCmdRad < 0 ? 0 : 1.45;
+  for (let i=0;i<60;i++){
+    const mid = (lo+hi)/2;
+    if (f(lo) <= f(hi) ? f(mid) < 0 : f(mid) > 0) lo = mid; else hi = mid;
+  }
+  return (lo+hi)/2;
+}
+
+// closed-form constant-curvature arc, starting heading pointing "up"
+function tracePath(kappa){
+  const theta0 = Math.PI/2;
+  const pts = [];
+  for (let i=0;i<=SAMPLES;i++){
+    const s = ARC_LEN * i/SAMPLES;
+    let x, y;
+    if (Math.abs(kappa) < 1e-6){
+      x = s*Math.cos(theta0);
+      y = s*Math.sin(theta0);
+    } else {
+      const th = theta0 + kappa*s;
+      x = (Math.sin(th) - Math.sin(theta0)) / kappa;
+      y = -(Math.cos(th) - Math.cos(theta0)) / kappa;
+    }
+    pts.push({x,y});
+  }
+  return pts;
+}
+
+function computeAll(deltaCmdDeg, speedKmh){
+  const deltaCmdRad = deg2rad(deltaCmdDeg);
+  const k = kOfV(speedKmh);
+
+  const kappaRef = Math.tan(deltaCmdRad)/L;
+
+  const deltaRUnc = k*deltaCmdRad;
+  const kappaUnc = (Math.tan(deltaCmdRad) - Math.tan(deltaRUnc))/L;
+
+  const deltaF = solveCorrectedFront(deltaCmdRad, k);
+  const deltaRCor = k*deltaF;
+  const kappaCor = (Math.tan(deltaF) - Math.tan(deltaRCor))/L;
+
+  const refR = Math.abs(kappaRef) > 1e-6 ? 1/Math.abs(kappaRef) : Infinity;
+  const uncR = Math.abs(kappaUnc) > 1e-6 ? 1/Math.abs(kappaUnc) : Infinity;
+  const corR = Math.abs(kappaCor) > 1e-6 ? 1/Math.abs(kappaCor) : Infinity;
+
+  const uncErr = Math.abs(kappaRef) > 1e-9 ? Math.abs(kappaUnc-kappaRef)/Math.abs(kappaRef)*100 : 0;
+  const corErr = Math.abs(kappaRef) > 1e-9 ? Math.abs(kappaCor-kappaRef)/Math.abs(kappaRef)*100 : 0;
+
+  let mode;
+  if (k < -0.03) mode = "Low speed - rear opposite front (tighter turn)";
+  else if (k > 0.03) mode = "High speed - rear same direction (smoother, stable)";
+  else mode = "Crossover - rear near neutral";
+
+  return {
+    refR, uncR, corR, uncErr, corErr,
+    deltaF: rad2deg(deltaF), deltaRCor: rad2deg(deltaRCor),
+    mode,
+    pathRef: tracePath(kappaRef),
+    pathUnc: tracePath(kappaUnc),
+    pathCor: tracePath(kappaCor)
+  };
+}
+
+// ---------------- rendering ----------------
+const canvas = document.getElementById('plot');
+const ctx = canvas.getContext('2d');
+let currentData = null;
+let animT = 0;
+
+function fmtR(r){ return isFinite(r) ? r.toFixed(1)+" m" : "inf"; }
+
+function drawPath(pts, toScreen, color, dash){
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.setLineDash(dash);
+  pts.forEach((p,i)=>{
+    const s = toScreen(p);
+    if (i===0) ctx.moveTo(s.x,s.y); else ctx.lineTo(s.x,s.y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// draws a small car-shaped marker (body + pointed nose) at position pts[idx],
+// oriented along the direction of travel at that point
+function drawMarker(pts, toScreen, color, t){
+  const n = pts.length;
+  const idx = Math.min(n-2, Math.max(0, Math.round(t*(n-1))));
+  const a = toScreen(pts[idx]);
+  const b = toScreen(pts[Math.min(n-1, idx+1)]);
+  const angle = Math.atan2(b.y-a.y, b.x-a.x);
+
+  ctx.save();
+  ctx.translate(a.x, a.y);
+  ctx.rotate(angle);
+
+  // car body (small pointed shape, nose in direction of travel)
+  const bodyLen = 14, bodyW = 7;
+  ctx.beginPath();
+  ctx.moveTo(-bodyLen/2, -bodyW/2);
+  ctx.lineTo(bodyLen*0.15, -bodyW/2);
+  ctx.lineTo(bodyLen/2, 0);              // pointed nose
+  ctx.lineTo(bodyLen*0.15,  bodyW/2);
+  ctx.lineTo(-bodyLen/2,  bodyW/2);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 0.75;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function draw(data){
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  const all = [...data.pathRef, ...data.pathUnc, ...data.pathCor];
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  all.forEach(p=>{ minX=Math.min(minX,p.x); maxX=Math.max(maxX,p.x); minY=Math.min(minY,p.y); maxY=Math.max(maxY,p.y); });
+  const padding = 50;
+  const rangeX = Math.max(maxX-minX, 1);
+  const rangeY = Math.max(maxY-minY, 1);
+  const scale = Math.min((W-2*padding)/rangeX, (H-2*padding)/rangeY);
+  const cx = W/2 - ((minX+maxX)/2)*scale;
+  const cy = H/2 + ((minY+maxY)/2)*scale;
+
+  function toScreen(p){ return { x: cx + p.x*scale, y: cy - p.y*scale }; }
+
+  drawPath(data.pathRef, toScreen, "gray", [6,4]);
+  drawPath(data.pathUnc, toScreen, "red", [2,3]);
+  drawPath(data.pathCor, toScreen, "teal", []);
+
+  // forward-only sawtooth: travels 0 -> 1 then jumps back to 0 (never reverses)
+  const t = animT % 1;
+  drawMarker(data.pathRef, toScreen, "gray", t);
+  drawMarker(data.pathUnc, toScreen, "red", t);
+  drawMarker(data.pathCor, toScreen, "teal", t);
+}
+
+function updateStats(data){
+  document.getElementById('statRefR').textContent = fmtR(data.refR);
+  document.getElementById('statUncR').textContent = fmtR(data.uncR);
+  document.getElementById('statUncErr').textContent = data.uncErr.toFixed(1)+"%";
+  document.getElementById('statDf').textContent = data.deltaF.toFixed(1)+"°";
+  document.getElementById('statDr').textContent = data.deltaRCor.toFixed(1)+"°";
+  document.getElementById('statCorR').textContent = fmtR(data.corR);
+  document.getElementById('statCorErr').textContent = data.corErr.toFixed(1)+"%";
+  document.getElementById('statMode').textContent = data.mode;
+}
+
+function recompute(){
+  const deltaCmd = parseFloat(document.getElementById('deltaCmd').value);
+  const speed = parseFloat(document.getElementById('speed').value);
+  document.getElementById('deltaCmdVal').textContent = deltaCmd.toFixed(1);
+  document.getElementById('speedVal').textContent = speed.toFixed(0);
+  currentData = computeAll(deltaCmd, speed);
+  updateStats(currentData);
+}
+
+function loop(){
+  animT += 0.006; // full traverse of the path takes ~2.8s at 60fps
+  if (currentData) draw(currentData);
+  requestAnimationFrame(loop);
+}
+
+document.getElementById('deltaCmd').addEventListener('input', recompute);
+document.getElementById('speed').addEventListener('input', recompute);
+document.getElementById('reset').addEventListener('click', function(){
+  const deltaCmdEl = document.getElementById('deltaCmd');
+  const speedEl = document.getElementById('speed');
+  deltaCmdEl.value = "15";
+  speedEl.value = "30";
+  // force both the slider UI and any other listeners to pick up the change
+  deltaCmdEl.dispatchEvent(new Event('input', { bubbles: true }));
+  speedEl.dispatchEvent(new Event('input', { bubbles: true }));
+  recompute();
+});
+
+recompute();
+loop();
+</script>
+
+</body>
+</html>
