@@ -157,6 +157,7 @@ a.project-card:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
   font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--faint);margin:0 0 8px;
 }
+.project-card .pc-eyebrow .pc-year{font-size:15px;font-weight:700;color:var(--txt)}
 .project-card h3{margin:0 0 8px;font-size:16.5px;font-weight:600;line-height:1.35}
 .project-card p.pc-sum{margin:0 0 14px;color:var(--dim);font-size:14px}
 .project-card .tags{margin-bottom:14px}
@@ -172,8 +173,8 @@ a.project-card:hover .pc-go .arrow{transform:translateX(3px)}
 .project-group{margin-bottom:36px}
 .project-group:last-child{margin-bottom:0}
 .project-group .pg-title{
-  margin:0 0 16px;font-size:14px;font-weight:600;color:var(--txt);
-  padding-bottom:8px;border-bottom:1px solid var(--line);
+  margin:0 0 18px;font-size:26px;font-weight:700;letter-spacing:-.01em;color:var(--txt);
+  padding-bottom:10px;border-bottom:1px solid var(--line);
 }
 .project-group .pg-empty{margin:0;color:var(--faint);font-size:13.5px;font-style:italic}
 
@@ -229,7 +230,7 @@ a.cert-preview:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
   padding-bottom:8px;border-bottom:1px solid var(--line);
 }
 .cert-topic h3{
-  margin:0;font-size:16px;font-weight:650;letter-spacing:-.01em;
+  margin:0;font-size:26px;font-weight:700;letter-spacing:-.01em;
   font-family:var(--sans);text-transform:none;color:var(--txt);
 }
 .cert-topic .count{
