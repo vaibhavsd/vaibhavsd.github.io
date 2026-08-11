@@ -407,6 +407,22 @@ header.hero.subpage p.lede{margin-bottom:22px;font-size:16px}
 }
 .demo-cap{margin:8px 0 20px;font-family:var(--mono);font-size:11.5px;color:var(--faint)}
 
+/* ── project page: embedded PDF write-up ───────────────────────── */
+/* breaks out of .prose's 72ch text column to the full .wrap content
+   width (940px wrap minus 24px padding each side), so the viewer isn't
+   stuck in a narrow strip; height then follows from that width via a
+   letter-page aspect ratio instead of a fixed number that would look
+   off once the box is wider */
+.pdf-embed-wrap{width:min(892px,calc(100vw - 48px));margin:0 0 16px}
+.pdf-embed{
+  width:100%;aspect-ratio:1/1.294;min-height:500px;max-height:1300px;
+  display:block;background:#fff;
+  border:1px solid var(--line);border-radius:var(--r);
+}
+.pdf-embed p{
+  margin:0;padding:16px;color:var(--dim);font-size:14px;
+}
+
 /* end-of-page return link */
 .page-end{
   display:flex;flex-wrap:wrap;gap:10px;align-items:center;

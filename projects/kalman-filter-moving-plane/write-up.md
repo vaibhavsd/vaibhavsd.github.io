@@ -22,4 +22,12 @@ The filtered position and velocity track the underlying trend more closely than 
 
 *Velocity: raw measurements vs. filtered estimate — the filter smooths out most of the measurement noise.*
 
+## Full write-up
+
+<div class="pdf-embed-wrap">
+  <object data="./PositionVelocityKalmanFilter.pdf" type="application/pdf" class="pdf-embed" aria-label="Full write-up (PDF)">
+    <p>Your browser can't display PDFs inline. <a href="./PositionVelocityKalmanFilter.pdf">Download the full write-up (PDF)</a> instead.</p>
+  </object>
+</div>
+
 **Downloads:** [Live Script (.mlx)](./PositionVelocityKalmanFilter.mlx) · [Full write-up (.pdf)](./PositionVelocityKalmanFilter.pdf)

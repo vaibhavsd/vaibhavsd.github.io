@@ -15,9 +15,6 @@ The challenge is that a transition matrix has to satisfy hard structural constra
 
 ## How the simulation works
 
-Full repo with the codebase is available at
-https://github.com/vaibhavsd/MarkovChainControl.git
-
 At a high level, `particlesim.m` simulates a swarm of robots moving between regions, one time step at a time, and checks whether they settle into the target distribution.
 
 - Each robot sits in one of a handful of regions. At every step, the sim looks at what fraction of the swarm is currently in each region and compares that to where we *want* the swarm to end up:
@@ -42,11 +39,21 @@ The mean-field controller drove the swarm's population distribution to the targe
 
 ## Matlab Simulation - Controller for 65 states
 
+### Github Repo
+[MarkovChainControl](https://github.com/vaibhavsd/MarkovChainControl.git)
+### Source File
+[particlesim.m](https://github.com/vaibhavsd/MarkovChainControl/blob/master/particlesim.m)
+
 ![Simulated population distribution across 65 states at the start of the run, before convergence](./LinearController-Start.jpg)
 
 ![Simulated population distribution across 65 states after the controller drives it to the target equilibrium](./LinearController-End.jpg)
 
 ## Palm-sized robots - Controller for 4 states
+
+### Github Repo
+[pheeno_ros](https://github.com/vaibhavsd/pheeno_ros.git)
+### Source Files
+[src](https://github.com/vaibhavsd/pheeno_ros/tree/master/src)
 
 ![Physical robot swarm across 4 regions at the start of the experiment, before convergence](./RobotExperiment-Start.jpg)
 
@@ -64,7 +71,6 @@ The mean-field controller drove the swarm's population distribution to the targe
   </div>
 </div>
 
-Full repo with the codebase is available at 
-https://github.com/vaibhavsd/MarkovChainControl.git
+Full repo with the codebase is available at [MarkovChainControl](https://github.com/vaibhavsd/MarkovChainControl.git).
 
 **Paper:** [Practical sub-optimal implementation of the control algorithm on palm-sized ground robots](https://ieeexplore.ieee.org/document/8264117) — IEEE Xplore, Jan 2018.

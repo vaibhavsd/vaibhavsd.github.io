@@ -24,4 +24,12 @@ The Kalman filter's estimated states track the true simulated states closely, ev
 
 *The Kalman filter is its own dynamical system — it takes the control input and the noisy measurement and outputs an estimate of every state.*
 
+## Full write-up
+
+<div class="pdf-embed-wrap">
+  <object data="./PendulumOnCart.pdf" type="application/pdf" class="pdf-embed" aria-label="Full write-up (PDF)">
+    <p>Your browser can't display PDFs inline. <a href="./PendulumOnCart.pdf">Download the full write-up (PDF)</a> instead.</p>
+  </object>
+</div>
+
 **Downloads:** [Live Script (.mlx)](./PendulumOnCart.mlx) · [Full write-up (.pdf)](./PendulumOnCart.pdf)
