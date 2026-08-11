@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<!-- ═══════════════════════════════════════════════════════════════════
+     PROJECTS PAGE
+     Full catalog, grouped by topic. The homepage (#projects) only shows a
+     short "featured" preview + a link here — this page is the canonical
+     complete list.
+
+     Every card links to its own self-contained folder under ./projects/<slug>/
+     — index.html, write-up.md and that project's images/models all live
+     together.
+
+     TO ADD A PROJECT:
+       1. copy an existing projects/<slug>/ folder → projects/<your-slug>/ and
+          edit index.html + write-up.md (paths inside are already folder-relative)
+       2. copy one <a class="project-card"> block below, paste it into the right
+          .project-group's grid (newest first within the group) and point href
+          at ./projects/<your-slug>/
+       3. optional: if it should also be featured on the homepage, swap/add a
+          matching card in index.html's #projects preview (keep that to ~4 cards)
+     TO ADD A SECTION: copy a .project-group block, give it a new id + .pg-title,
+     add a matching chip in the hero chip-row, and either a .project-grid of
+     cards or a .pg-empty "coming soon" note.
+     Nothing else to update — there is no build step and no project index to sync.
+     ═══════════════════════════════════════════════════════════════════ -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Projects — Vaibhav Deshmukh</title>
+<meta name="description" content="Personal and side projects by Vaibhav Deshmukh — controls, estimation, ADAS, ROS &amp; robotics, machine learning." />
+<meta name="author" content="Vaibhav Deshmukh" />
+
+<meta property="og:title" content="Projects — Vaibhav Deshmukh" />
+<meta property="og:description" content="Personal and side work on controls, estimation, ADAS, ROS &amp; robotics and machine learning." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://vaibhavsd.github.io/projects.html" />
+
+<link rel="stylesheet" href="./assets/css/style.css" />
+</head>
+<body>
+
+<nav class="site subpage">
+  <div class="wrap">
+    <a class="brand" href="./index.html">vaibhav&nbsp;deshmukh</a>
+    <a class="link keep back" href="./index.html#projects">←&nbsp;Back to site</a>
+    <span class="sep" aria-hidden="true"></span>
+    <a class="link" href="./index.html#experience">Experience</a>
+    <a class="link" href="./index.html#certifications">Certifications</a>
+    <a class="link" href="./index.html#contact">Contact</a>
+  </div>
+</nav>
+
+<header class="hero subpage" id="top">
+  <div class="wrap">
+    <nav class="crumb" aria-label="Breadcrumb">
+      <a href="./index.html">Home</a>
+      <span class="divider" aria-hidden="true">/</span>
+      <span class="here">Projects</span>
+    </nav>
+
+    <p class="eyebrow">Personal &amp; side work</p>
+    <h1>Projects</h1>
+    <p class="lede">
+      Controls, estimation and simulation work outside of my day job — grouped by topic.
+      Every card opens a dedicated page with the full write-up.
+    </p>
+    <div class="chip-row">
+      <a class="chip" href="#controls">Controls</a>
+      <a class="chip" href="#estimation">Estimation</a>
+      <a class="chip" href="#adas">ADAS</a>
+      <a class="chip" href="#ros-robotics">ROS &amp; Robotics</a>
+      <a class="chip" href="#machine-learning">Machine Learning</a>
+      <a class="chip" href="#vibe-coding">Vibe Coding</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <div class="wrap">
+    <h2>Projects by topic</h2>
+
+    <div class="project-group" id="controls">
+      <h3 class="pg-title">Controls</h3>
+      <div class="project-grid">
+
+        <a class="project-card" href="./projects/markov-chain-control/">
+          <p class="pc-eyebrow">Project · 2018</p>
+          <h3>Controller Design for Markov Chain Models</h3>
+          <p class="pc-sum">
+            LMI-based controller design for stabilizing and controlling Markov chain
+            models, in MATLAB — validated in simulation and on real ground robots.
+          </p>
+          <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="project-card" href="./projects/cruise-control-pid/">
+          <p class="pc-eyebrow">Project · 2017</p>
+          <h3>Cruise Control PID</h3>
+          <p class="pc-sum">
+            Simulink model of a car's cruise control loop with a switchable open-loop / PID
+            input to compare the two.
+          </p>
+          <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="project-card" href="./projects/train-pd-pid-control/">
+          <p class="pc-eyebrow">Project · 2016</p>
+          <h3>Train PD/PID Control</h3>
+          <p class="pc-sum">
+            Simulink model comparing PD and PID control for holding a train at a fixed
+            position.
+          </p>
+          <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
+        </a>
+
+      </div>
+    </div>
+
+    <div class="project-group" id="estimation">
+      <h3 class="pg-title">Estimation</h3>
+      <div class="project-grid">
+
+        <a class="project-card" href="./projects/pendulum-on-cart/">
+          <p class="pc-eyebrow">Project · 2021</p>
+          <h3>Inverted Pendulum on a Cart</h3>
+          <p class="pc-sum">
+            Modeling, LQR control and Kalman-filter state estimation for an inverted
+            pendulum on a cart, in MATLAB.
+          </p>
+          <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="project-card" href="./projects/kalman-filter-moving-plane/">
+          <p class="pc-eyebrow">Project · 2021</p>
+          <h3>Position-Velocity Kalman Filter</h3>
+          <p class="pc-sum">
+            Kalman filter estimating an airplane's position and velocity from noisy
+            measurements, in MATLAB.
+          </p>
+          <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
+        </a>
+
+      </div>
+    </div>
+
+    <div class="project-group" id="adas">
+      <h3 class="pg-title">ADAS</h3>
+      <div class="project-grid">
+
+        <a class="project-card" href="./projects/curvature-preserving-4ws/">
+          <p class="pc-eyebrow">Project · 2026</p>
+          <h3>Curvature-Preserving 4-Wheel Steering</h3>
+          <p class="pc-sum">
+            Adapting an existing front-wheel-only steering controller to a 4-wheel-steer
+            vehicle without redesigning it — interactive path-tracking demo.
+          </p>
+          <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="project-card" href="./projects/lqr-lane-centering/">
+          <p class="pc-eyebrow">Project · 2026</p>
+          <h3>LQR for Lane Centering</h3>
+          <p class="pc-sum">
+            Interactive lane-centering simulation with an LQR-style controller —
+            bicycle-model dynamics, tunable cost weights, live gain computation.
+          </p>
+          <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
+        </a>
+
+      </div>
+    </div>
+
+    <div class="project-group" id="ros-robotics">
+      <h3 class="pg-title">ROS &amp; Robotics</h3>
+      <div class="project-grid">
+
+        <a class="project-card" href="./projects/formation-control-mobile-robots/">
+          <p class="pc-eyebrow">Project · 2018</p>
+          <h3>Formation Control on Mobile Robots</h3>
+          <p class="pc-sum">
+            Formation control algorithms on ROS, in Python — simulated in Gazebo,
+            then deployed on TurtleBots.
+          </p>
+          <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
+        </a>
+
+      </div>
+    </div>
+
+    <div class="project-group" id="machine-learning">
+      <h3 class="pg-title">Machine Learning</h3>
+      <p class="pg-empty">Coming soon.</p>
+    </div>
+
+    <div class="project-group" id="vibe-coding">
+      <h3 class="pg-title">Vibe Coding</h3>
+      <p class="pg-empty">Coming soon.</p>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="page-end">
+      <a class="btn" href="./index.html#projects">← Back to site</a>
+      <a class="btn" href="./index.html#certifications">Certifications</a>
+      <a class="btn" href="./assets/Vaibhav_Deshmukh_Resume.pdf" target="_blank" rel="noopener">Résumé (PDF)</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    © 2026 Vaibhav Deshmukh · <a href="./index.html">Home</a> ·
+    <a href="./assets/Vaibhav_Deshmukh_Resume.pdf" target="_blank" rel="noopener">Résumé</a>
+  </div>
+</footer>
+
+</body>
+</html>

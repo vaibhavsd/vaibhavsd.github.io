@@ -8,7 +8,10 @@
   --txt:#14181d; --dim:#39424c; --faint:#565f6a;
   --amber:#92400e;      /* accent text — headings, eyebrows, markers */
   --amber-solid:#f59e0b;/* accent fill — primary button */
+  --amber-wash:#fdf3e2; /* accent fill — Certifications section band */
   --cyan:#0b5566;       /* links */
+  --cyan-solid:#0891a8; /* accent fill — bright cyan, pairs with --amber-solid */
+  --cyan-wash:#e8f5f7;  /* accent fill — Projects section band */
   --shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -90,6 +93,13 @@ section h2{
   text-transform:uppercase;color:var(--amber);font-weight:600;
 }
 
+/* Projects and Certifications get a soft color wash + colored top edge so
+   they stand out while scrolling past the plain white sections around them.
+   Cards inside stay white (background:#fff), so they still pop off the tint. */
+#projects{background:var(--cyan-wash);border-top:4px solid var(--cyan-solid)}
+#projects h2{color:var(--cyan-solid)}
+#certifications{background:var(--amber-wash);border-top:4px solid var(--amber-solid)}
+
 /* ── experience ─────────────────────────────────────────────── */
 .job{
   border-left:2px solid var(--line);padding:0 0 32px 22px;position:relative;
@@ -157,6 +167,20 @@ a.project-card:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 }
 .project-card .pc-go .arrow{transition:transform .15s}
 a.project-card:hover .pc-go .arrow{transform:translateX(3px)}
+
+/* project sub-sections (Controls, Estimation, ADAS, …) within #projects */
+.project-group{margin-bottom:36px}
+.project-group:last-child{margin-bottom:0}
+.project-group .pg-title{
+  margin:0 0 16px;font-size:14px;font-weight:600;color:var(--txt);
+  padding-bottom:8px;border-bottom:1px solid var(--line);
+}
+.project-group .pg-empty{margin:0;color:var(--faint);font-size:13.5px;font-style:italic}
+
+/* spacing after the "View all projects →" button on the homepage preview,
+   before the grid — scoped to a bare .btn immediately followed by a
+   .project-grid, so page-end buttons elsewhere are unaffected */
+.btn + .project-grid{margin-top:22px}
 
 /* ── certifications: topic chips (certifications.html hero) ─── */
 .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}

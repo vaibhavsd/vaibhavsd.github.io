@@ -156,25 +156,35 @@
 </section>
 
 <!-- ══════════════════ PROJECTS ══════════════════
-     Every card links to its own self-contained folder under ./projects/<slug>/ —
-     index.html, write-up.md and that project's images/models all live together.
-     TO ADD A PROJECT:
-       1. copy an existing projects/<slug>/ folder → projects/<your-slug>/ and edit
-          index.html + write-up.md (paths inside are already folder-relative)
-       2. copy one <a class="project-card"> block below, paste it at the top of the
-          grid (newest first) and point href at ./projects/<your-slug>/
-     Nothing else to update — there is no build step and no project index to sync.
+     Homepage preview only — a handful of featured cards + a link to the full,
+     topic-grouped catalog on projects.html. Every card links to its own
+     self-contained folder under ./projects/<slug>/ — index.html, write-up.md
+     and that project's images/models all live together.
+     TO FEATURE A PROJECT HERE: copy an <a class="project-card"> block from
+     projects.html and paste it into the grid below (keep this list short,
+     ~4 cards). TO ADD A NEW PROJECT: see the instructions at the top of
+     projects.html — that page is the canonical full list.
      ═══════════════════════════════════════════════ -->
 <section id="projects">
   <div class="wrap">
     <h2>Projects</h2>
     <p class="section-note">
-      Personal and side work on controls, estimation and simulation. Each card opens a
-      dedicated page with the full write-up — use the “All projects” link in the header of
-      that page to come back here.
+      A few highlights from personal and side work on controls, estimation and
+      simulation. Each card opens a dedicated page with the full write-up.
     </p>
+    <a class="btn" href="./projects.html">View all projects →</a>
 
     <div class="project-grid">
+
+      <a class="project-card" href="./projects/formation-control-mobile-robots/">
+        <p class="pc-eyebrow">Project · 2018</p>
+        <h3>Formation Control on Mobile Robots</h3>
+        <p class="pc-sum">
+          Formation control algorithms on ROS, in Python — simulated in Gazebo,
+          then deployed on TurtleBots.
+        </p>
+        <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
+      </a>
 
       <a class="project-card" href="./projects/curvature-preserving-4ws/">
         <p class="pc-eyebrow">Project · 2026</p>
@@ -182,26 +192,6 @@
         <p class="pc-sum">
           Adapting an existing front-wheel-only steering controller to a 4-wheel-steer
           vehicle without redesigning it — interactive path-tracking demo.
-        </p>
-        <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
-      </a>
-
-      <a class="project-card" href="./projects/lqr-lane-centering/">
-        <p class="pc-eyebrow">Project · 2026</p>
-        <h3>LQR for Lane Centering</h3>
-        <p class="pc-sum">
-          Interactive lane-centering simulation with an LQR-style controller —
-          bicycle-model dynamics, tunable cost weights, live gain computation.
-        </p>
-        <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
-      </a>
-
-      <a class="project-card" href="./projects/kalman-filter-moving-plane/">
-        <p class="pc-eyebrow">Project · 2021</p>
-        <h3>Position-Velocity Kalman Filter</h3>
-        <p class="pc-sum">
-          Kalman filter estimating an airplane's position and velocity from noisy
-          measurements, in MATLAB.
         </p>
         <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
       </a>
@@ -216,42 +206,12 @@
         <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
       </a>
 
-      <a class="project-card" href="./projects/formation-control-mobile-robots/">
-        <p class="pc-eyebrow">Project · 2018</p>
-        <h3>Formation Control on Mobile Robots</h3>
-        <p class="pc-sum">
-          Formation control algorithms on ROS, in Python — simulated in Gazebo,
-          then deployed on TurtleBots.
-        </p>
-        <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
-      </a>
-
       <a class="project-card" href="./projects/markov-chain-control/">
         <p class="pc-eyebrow">Project · 2018</p>
         <h3>Controller Design for Markov Chain Models</h3>
         <p class="pc-sum">
           LMI-based controller design for stabilizing and controlling Markov chain
           models, in MATLAB — validated in simulation and on real ground robots.
-        </p>
-        <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
-      </a>
-
-      <a class="project-card" href="./projects/cruise-control-pid/">
-        <p class="pc-eyebrow">Project · 2017</p>
-        <h3>Cruise Control PID</h3>
-        <p class="pc-sum">
-          Simulink model of a car's cruise control loop with a switchable open-loop / PID
-          input to compare the two.
-        </p>
-        <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
-      </a>
-
-      <a class="project-card" href="./projects/train-pd-pid-control/">
-        <p class="pc-eyebrow">Project · 2016</p>
-        <h3>Train PD/PID Control</h3>
-        <p class="pc-sum">
-          Simulink model comparing PD and PID control for holding a train at a fixed
-          position.
         </p>
         <span class="pc-go">Open project page <span class="arrow" aria-hidden="true">→</span></span>
       </a>
