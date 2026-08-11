@@ -5,10 +5,10 @@
    ═══════════════════════════════════════════════════════════════════ */
 :root{
   --bg:#ffffff; --panel:#f7f8f9; --panel-2:#eef1f4; --line:#e1e5ea;
-  --txt:#14181d; --dim:#4d5761; --faint:#6b7580;
-  --amber:#b45309;      /* accent text — headings, eyebrows, markers */
+  --txt:#14181d; --dim:#39424c; --faint:#565f6a;
+  --amber:#92400e;      /* accent text — headings, eyebrows, markers */
   --amber-solid:#f59e0b;/* accent fill — primary button */
-  --cyan:#0e7490;       /* links */
+  --cyan:#0b5566;       /* links */
   --shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
