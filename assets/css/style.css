@@ -137,15 +137,14 @@ section h2{
 .section-note{
   margin:-18px 0 22px;color:var(--faint);font-size:14px;max-width:62ch;
 }
-/* auto-fill, not auto-fit: cards keep the same width whether there is one
-   project or fifteen, instead of a lone card stretching the full row */
+/* one full-width tile per row everywhere .project-grid is used */
 .project-grid{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;
+  display:grid;grid-template-columns:1fr;gap:16px;
 }
 a.project-card{
-  display:flex;flex-direction:column;color:var(--txt);
+  display:block;position:relative;color:var(--txt);
   background:#fff;border:1px solid var(--line);border-radius:var(--r);
-  padding:18px 20px;box-shadow:var(--shadow);
+  padding:14px 52px 14px 18px;box-shadow:var(--shadow);
   transition:border-color .15s,box-shadow .15s,transform .15s;
 }
 a.project-card:hover{
@@ -153,21 +152,26 @@ a.project-card:hover{
   box-shadow:0 2px 4px rgba(16,24,40,.05),0 6px 14px rgba(16,24,40,.07);
 }
 a.project-card:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
-.project-card .pc-eyebrow{
-  font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--faint);margin:0 0 8px;
+.project-card h3{
+  margin:0 0 4px;font-size:16.5px;font-weight:600;line-height:1.35;
+  display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;
 }
-.project-card .pc-eyebrow .pc-year{font-size:15px;font-weight:700;color:var(--txt)}
-.project-card h3{margin:0 0 8px;font-size:16.5px;font-weight:600;line-height:1.35}
-.project-card p.pc-sum{margin:0 0 14px;color:var(--dim);font-size:14px}
-.project-card .tags{margin-bottom:14px}
-/* "Open project page →" — the affordance that says this leaves the current page */
+/* year now lives right after the title instead of its own eyebrow line */
+.project-card h3 .pc-year{
+  font-family:var(--mono);font-size:12.5px;font-weight:700;letter-spacing:.02em;
+  color:var(--faint);
+}
+.project-card p.pc-sum{margin:0;color:var(--dim);font-size:14px}
+.project-card .tags{margin-top:10px}
+/* corner ↗ replaces the old "Open project page →" text — the card's own
+   text already says what it is, this just signals it's a link elsewhere */
 .project-card .pc-go{
-  margin-top:auto;font-family:var(--mono);font-size:12px;letter-spacing:.03em;
-  color:var(--cyan);display:flex;align-items:center;gap:6px;
+  position:absolute;top:12px;right:14px;
+  font-family:var(--mono);font-size:26px;font-weight:700;line-height:1;
+  color:var(--cyan-solid);
+  transition:transform .15s;
 }
-.project-card .pc-go .arrow{transition:transform .15s}
-a.project-card:hover .pc-go .arrow{transform:translateX(3px)}
+a.project-card:hover .pc-go{transform:translate(3px,-3px)}
 
 /* project sub-sections (Controls, Estimation, ADAS, …) within #projects */
 .project-group{margin-bottom:36px}
@@ -178,10 +182,35 @@ a.project-card:hover .pc-go .arrow{transform:translateX(3px)}
 }
 .project-group .pg-empty{margin:0;color:var(--faint);font-size:13.5px;font-style:italic}
 
-/* spacing after the "View all projects →" button on the homepage preview,
-   before the grid — scoped to a bare .btn immediately followed by a
-   .project-grid, so page-end buttons elsewhere are unaffected */
+/* projects.html only: one accent color per topic (set via --accent on the
+   group), used on the heading underline + a colored top edge on that
+   topic's cards, and echoed by the matching hero chip. Homepage's preview
+   grid isn't wrapped in .project-group, so it's unaffected. */
+.project-group#controls{--accent:#4f46e5}
+.project-group#estimation{--accent:#0d9488}
+.project-group#adas{--accent:#ea580c}
+.project-group#ros-robotics{--accent:#7c3aed}
+.project-group#machine-learning{--accent:#db2777}
+.project-group#vibe-coding{--accent:#16a34a}
+.project-group[id] .pg-title{color:var(--accent,var(--txt));border-bottom-color:var(--accent,var(--line))}
+.project-group[id] .project-card{border-top:3px solid var(--accent,var(--line))}
+
+/* scoped to projects.html's hero chip-row (.topic-chips) specifically —
+   certifications.html reuses bare .chip-row with some of the same #hash
+   names (#adas, #machine-learning) for different topics, and that page's
+   chips should stay untouched */
+.topic-chips a.chip[href="#controls"]{border-color:#4f46e5;color:#4f46e5}
+.topic-chips a.chip[href="#estimation"]{border-color:#0d9488;color:#0d9488}
+.topic-chips a.chip[href="#adas"]{border-color:#ea580c;color:#ea580c}
+.topic-chips a.chip[href="#ros-robotics"]{border-color:#7c3aed;color:#7c3aed}
+.topic-chips a.chip[href="#machine-learning"]{border-color:#db2777;color:#db2777}
+.topic-chips a.chip[href="#vibe-coding"]{border-color:#16a34a;color:#16a34a}
+
+/* spacing after the "View all …" button on the homepage previews, before
+   the grid — scoped to a bare .btn immediately followed by the grid, so
+   page-end buttons elsewhere are unaffected */
 .btn + .project-grid{margin-top:22px}
+.btn + .cert-preview-grid{margin-top:22px}
 
 /* ── certifications: topic chips (certifications.html hero) ─── */
 .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
