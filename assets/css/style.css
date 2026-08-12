@@ -358,6 +358,11 @@ nav.site a.link.back:hover{color:var(--amber)}
 nav.site .sep{
   width:1px;height:18px;background:var(--line);
 }
+/* project sub-pages: "← All projects" (one level up) and "← Back to site"
+   (home) sit together as one tight group, so they read as a pair of
+   related back-actions rather than two unrelated nav items */
+nav.site .back-group{display:inline-flex;align-items:center;gap:10px}
+nav.site .back-group .crumb-dot{color:var(--faint);font-size:12px}
 .crumb{
   font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;
   color:var(--faint);margin:0 0 18px;
