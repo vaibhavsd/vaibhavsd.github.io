@@ -1,4 +1,4 @@
-An interactive track-type tractor (dozer) grade-control demo — IMU/GNSS state estimation feeding closed-loop blade automation, in the style of the machine control systems I worked on at Caterpillar.
+An interactive track-type tractor (dozer) grade-control demo — IMU/GNSS state estimation feeding closed-loop blade automation, in the style of the heavy-equipment machine control systems I've worked on.
 
 ## 1. Project idea
 
@@ -37,6 +37,6 @@ Drive with **A/D**, toggle blade automation with **G** (or fly it manually with 
 - Two-state (angle + bias) Kalman filters fusing rate integration with noisy absolute measurements — one per sensed quantity (chassis pitch, push-arm pitch, cutting-edge elevation).
 - Machine forward kinematics turning fused link angles into a cutting-edge position, cross-checked against an independently-estimated elevation channel.
 - A closed-loop automation controller driving blade lift cylinders off that estimate to hold grade, with a cut-and-fill terrain model so a pass visibly does real earthmoving.
-- Built independently as a personal demo of the kind of IMU-based state estimation and grade-control automation I worked on for Caterpillar's Trimble Control Technologies group — not their code, no proprietary logic.
+- Built independently as a personal demo of the kind of IMU-based state estimation and grade-control automation used in heavy-equipment machine control — original code, no proprietary logic from any employer.
 
 **Download:** [dozer-imu-sim.html](./dozer-imu-sim.html) — the whole simulation, one self-contained file, no server or install needed.

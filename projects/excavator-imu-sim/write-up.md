@@ -1,4 +1,4 @@
-An interactive excavator grade-control demo — three-link IMU state estimation and forward kinematics feeding closed-loop boom/bucket automation, in the style of the machine control systems I worked on at Caterpillar.
+An interactive excavator grade-control demo — three-link IMU state estimation and forward kinematics feeding closed-loop boom/bucket automation, in the style of the heavy-equipment machine control systems I've worked on.
 
 ## 1. Project idea
 
@@ -34,6 +34,6 @@ Drive boom/stick/bucket manually with **W/S**, **A/D**, **Q/E**, toggle automati
 - Three independent per-link IMUs, each axis run through its own angle + gyro-bias Kalman filter, fusing gyro-rate integration with a noisier accel-derived measurement.
 - Forward kinematics turning the three fused angles into a bucket-tip position, with the demo's error readout showing how estimator error at each joint propagates differently through the linkage.
 - Shared-control automation — boom + bucket hold grade automatically while the operator drives the stick — matching how real grade-assist excavator systems split the work.
-- Built independently as a personal demo of the kind of IMU-based state estimation and forward-kinematics work I did for Caterpillar's Trimble Control Technologies group — not their code, no proprietary logic.
+- Built independently as a personal demo of the kind of IMU-based state estimation and forward-kinematics work used in heavy-equipment machine control — original code, no proprietary logic from any employer.
 
 **Download:** [excavator-imu-sim.html](./excavator-imu-sim.html) — the whole simulation, one self-contained file, no server or install needed.

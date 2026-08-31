@@ -1,4 +1,4 @@
-An interactive motor grader grade-control demo — mainframe/drawbar IMU state estimation and laser-aided blade elevation feeding closed-loop automation, in the style of the machine control systems I worked on at Caterpillar.
+An interactive motor grader grade-control demo — mainframe/drawbar IMU state estimation and laser-aided blade elevation feeding closed-loop automation, in the style of the heavy-equipment machine control systems I've worked on.
 
 ## 1. Project idea
 
@@ -32,6 +32,6 @@ Drive with **A/D**, toggle blade automation with **G** (or fly it manually with 
 - Two-state (angle/state + bias) Kalman filters fusing rate integration with a noisier absolute measurement — one per sensed quantity (mainframe pitch, drawbar pitch, laser-aided cutting-edge elevation).
 - A closed-loop automation controller driving the blade lift cylinders off the fused elevation estimate to hold grade while the operator drives.
 - Modeled as elevation-only, matching how real grader grade-control also runs a parallel cross-slope loop on the follower cylinder that this 2D demo leaves out.
-- Built independently as a personal demo of the kind of IMU-based state estimation and grade-control automation I worked on for Caterpillar's Trimble Control Technologies group — not their code, no proprietary logic.
+- Built independently as a personal demo of the kind of IMU-based state estimation and grade-control automation used in heavy-equipment machine control — original code, no proprietary logic from any employer.
 
 **Download:** [grader-imu-sim.html](./grader-imu-sim.html) — the whole simulation, one self-contained file, no server or install needed.
