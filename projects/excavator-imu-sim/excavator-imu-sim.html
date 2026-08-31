@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excavator Automation — IMU State Estimation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14181d; --panel:#1b2129; --panel2:#20272f; --line:#2b333d;
+  --ink:#e8edf2; --dim:#8b98a5; --faint:#5a6673;
+  --orange:#ff8a1e; --green:#38d996; --amber:#ffc53d; --red:#ff5252;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --disp:'Chakra Petch',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--disp);padding:14px 16px 28px}
+.wrap{max-width:1180px;margin:0 auto}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+h1{font-size:17px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+h1 span{color:var(--orange)}
+#status{font-family:var(--mono);font-size:12px;padding:4px 10px;border:1px solid var(--line);border-radius:3px;color:var(--dim);letter-spacing:.05em}
+#status.assist{color:var(--green);border-color:#265a45}
+.hbtns{margin-left:auto;display:flex;gap:8px}
+button{font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:7px 16px;cursor:pointer;user-select:none;-webkit-user-select:none}
+button:hover{border-color:var(--dim)}
+button.primary{background:var(--orange);border-color:var(--orange);color:#181008}
+button.on{background:var(--green);border-color:var(--green);color:#08201a}
+button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.stage{display:flex;gap:10px}
+.canvasbox{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+canvas#world{display:block;width:100%;height:auto}
+.gradebar{width:64px;background:var(--panel);border:1px solid var(--line);border-radius:6px;
+  display:flex;flex-direction:column;align-items:center;padding:8px 0 6px;gap:6px}
+.gradebar .lbl{font-size:9px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;text-align:center;line-height:1.3}
+#gbval{font-family:var(--mono);font-size:11px;color:var(--green)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr) 320px;gap:10px;margin-top:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.card h2{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;display:flex;justify-content:space-between}
+.card h2 .tag{color:var(--orange)}
+.angles{font-family:var(--mono);font-size:12px;line-height:1.65}
+.angles .est{color:var(--green);font-weight:600;font-size:16px}
+.angles .tru{color:var(--faint)}
+.angles .err{color:var(--dim)}
+.axrow{font-family:var(--mono);font-size:10.5px;color:var(--dim);line-height:1.6}
+.axrow b{color:var(--ink);font-weight:500}
+.axrow .bias{color:var(--amber)}
+canvas.strip{width:100%;height:48px;display:block;margin-top:6px;background:var(--panel2);border-radius:3px}
+.kv{font-family:var(--mono);font-size:12px;line-height:1.85}
+.kv b{color:var(--green);font-weight:600}
+.kv .o{color:var(--orange)}
+.slider{margin-top:8px}
+.slider label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;font-family:var(--mono)}
+.slider input{width:100%;accent-color:var(--orange)}
+.progresswrap{height:8px;background:var(--panel2);border-radius:4px;margin-top:4px;overflow:hidden}
+#progress{height:100%;width:0%;background:var(--green);transition:width .2s}
+.pad{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
+.pad button{padding:10px 4px;font-size:11px;color:#dfe6ec;touch-action:none;display:flex;align-items:center;justify-content:center;gap:5px}
+.pad button kbd{margin:0}
+.pad button.active{background:var(--orange);border-color:var(--orange);color:#181008}
+.keys{font-family:var(--mono);font-size:11.5px;color:#aeb9c4;margin-top:10px;line-height:2.1}
+.keys b{color:var(--ink)}
+kbd{display:inline-block;min-width:20px;text-align:center;padding:2px 6px;margin:0 1px;
+  background:#2e3742;border:1px solid #4a5560;border-bottom-width:2px;border-radius:4px;
+  color:#fff;font-family:var(--mono);font-size:11px;font-weight:600}
+.legend{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:3px;margin-right:5px;vertical-align:middle;border-radius:1px}
+@media (max-width:980px){.grid{grid-template-columns:1fr 1fr}.stage{flex-direction:column}
+ .gradebar{flex-direction:row;width:100%;height:58px;padding:0 10px}}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Excavator Automation <span>//</span> IMU State Estimation</h1>
+  <div id="status">MANUAL CONTROL</div>
+  <div class="hbtns">
+    <button id="btnDemo">Demo</button>
+    <button id="btnAssist" class="primary">Automation [G]</button>
+    <button id="btnReset">Reset</button>
+  </div>
+</header>
+
+<div class="stage">
+  <div class="canvasbox"><canvas id="world" width="1100" height="530"></canvas></div>
+  <div class="gradebar">
+    <div class="lbl" id="gblbl">Depth<br>to grade</div>
+    <canvas id="gbar" width="44" height="380"></canvas>
+    <div id="gbval">+0.00</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Boom link <span class="tag">IMU-1</span></h2>
+    <div class="angles">
+      <div class="est" id="e1">--.-°</div>
+      <div class="tru">true <span id="t1">--.-°</span> <span class="err" id="d1"></span></div>
+    </div>
+    <div class="axrow">R <b id="r1">--</b> Y <b id="y1">--</b> · b̂<sub>g</sub> <span class="bias" id="b1">--</span>°/s <span id="bt1" style="color:var(--faint)"></span></div>
+    <canvas class="strip" id="s1" width="300" height="48"></canvas>
+  </div>
+  <div class="card">
+    <h2>Stick link <span class="tag">IMU-2</span></h2>
+    <div class="angles">
+      <div class="est" id="e2">--.-°</div>
+      <div class="tru">true <span id="t2">--.-°</span> <span class="err" id="d2"></span></div>
+    </div>
+    <div class="axrow">R <b id="r2">--</b> Y <b id="y2">--</b> · b̂<sub>g</sub> <span class="bias" id="b2">--</span>°/s <span id="bt2" style="color:var(--faint)"></span></div>
+    <canvas class="strip" id="s2" width="300" height="48"></canvas>
+  </div>
+  <div class="card">
+    <h2>Bucket link <span class="tag">IMU-3</span></h2>
+    <div class="angles">
+      <div class="est" id="e3">--.-°</div>
+      <div class="tru">true <span id="t3">--.-°</span> <span class="err" id="d3"></span></div>
+    </div>
+    <div class="axrow">R <b id="r3">--</b> Y <b id="y3">--</b> · b̂<sub>g</sub> <span class="bias" id="b3">--</span>°/s <span id="bt3" style="color:var(--faint)"></span></div>
+    <canvas class="strip" id="s3" width="300" height="48"></canvas>
+  </div>
+  <div class="card">
+    <h2>Bucket tip — forward kinematics</h2>
+    <div class="kv">
+      est&nbsp; X <b id="tx">--</b>&nbsp; Y <b id="ty">--</b> m &nbsp;·&nbsp; FK err <span class="o" id="fkerr">--</span> cm<br>
+      cut level <b id="cutlvl">--</b> m &nbsp;·&nbsp; pass <span class="o" id="pass">0</span>
+    </div>
+    <div class="pad">
+      <button data-k="w"><kbd>W</kbd> Boom ▲</button><button data-k="a"><kbd>A</kbd> Crowd ◀</button><button data-k="q"><kbd>Q</kbd> Curl ⤾</button>
+      <button data-k="s"><kbd>S</kbd> Boom ▼</button><button data-k="d"><kbd>D</kbd> Stick ▶</button><button data-k="e"><kbd>E</kbd> Dump ⤿</button>
+    </div>
+    <div class="keys">
+      <kbd>W</kbd><kbd>S</kbd> boom &nbsp; <kbd>A</kbd><kbd>D</kbd> stick &nbsp; <kbd>Q</kbd><kbd>E</kbd> bucket &nbsp; <kbd>G</kbd> automation<br>
+      Automation on: it controls <b>boom + bucket</b> to hold the cut level — you drive the stick with <kbd>A</kbd><kbd>D</kbd>, and <kbd>W</kbd><kbd>S</kbd> raise/lower the cut level.
+    </div>
+    <div class="slider"><label>Final grade <span id="gradeLbl">-1.50 m</span></label>
+      <input type="range" id="grade" min="-2.2" max="-0.6" step="0.05" value="-1.5"></div>
+    <div class="slider"><label>IMU noise <span id="noiseLbl">1.0×</span></label>
+      <input type="range" id="noise" min="0" max="3" step="0.1" value="1"></div>
+    <div class="slider"><label>Cut coverage <span id="covLbl">0%</span></label>
+      <div class="progresswrap"><div id="progress"></div></div></div>
+    <div class="legend">
+      <span><i style="background:var(--green)"></i>estimate</span>
+      <span><i style="background:#e8edf2;opacity:.5"></i>true</span>
+      <span><i style="background:var(--orange)"></i>final grade</span>
+      <span><i style="background:var(--green);height:1px"></i>cut level</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+'use strict';
+/* ================= constants ================= */
+const L1=5.7, L2=2.9, L3=1.5;
+const PIV={x:0, y:1.6};
+const CUT_X0=3.2, CUT_X1=7.0;
+const DIG_ABS=-2.2;                       // bucket absolute pitch while cutting
+const DT=1/120;
+const JLIM=[[-0.35,1.12],[-2.6,-0.35],[-2.4,-0.15]];
+const RATE=1.1;
+const OP={boom:0.55, stick:0.55, bucket:0.85};   // operator lever rates rad/s
+
+/* ================= state ================= */
+let q=[0.85,-0.85,-1.15], qdot=[0,0,0];
+let assist=false, cutLevel=-1.0, gradeY=-1.5, noiseK=1.0, passN=0;
+let terrain=[], TX0=2.4, TX1=8.6, TN=248;
+let keys={}, demo=false, dphase='POSITION', vkeys={}, dTimer=0, stallX=0, stallT=0;
+let passArm=false;                        // saw right side of window since assist on
+let hist=[[],[],[]]; const HMAX=12/DT/4; let histAcc=0;
+
+const absAngles=qq=>[qq[0], qq[0]+qq[1], qq[0]+qq[1]+qq[2]];
+
+/* ================= IMU truth model ================= */
+// per link, per axis: pitch is the FK-relevant axis; roll/yaw are small machine vibrations
+let trueBias=[];   // [link][axis] gyro bias rad/s
+let vibPh=[];
+function initIMU(){
+  trueBias=[0,1,2].map(()=>[0,1,2].map(()=> (Math.random()-0.5)*0.035));
+  vibPh=[0,1,2].map(()=>[Math.random()*7,Math.random()*7]);
+}
+function trueAxes(i,t,cutting){
+  const aT=absAngles(q);
+  const v=cutting?0.02:0.004;
+  return [aT[i],
+    v*Math.sin(3.1*t+vibPh[i][0]),          // roll
+    v*Math.sin(2.3*t+vibPh[i][1])];         // yaw
+}
+function trueRates(i,prev,cur){ return [0,1,2].map(a=>(cur[a]-prev[a])/DT); }
+
+/* ================= 2-state Kalman filter (angle, gyro bias) ================= */
+function KF2(a0){
+  return {x:[a0,0], P:[[0.02,0],[0,0.0004]]};
+}
+function kfStep(k, gyro, z, Rm){
+  // predict: a += (g-b)dt
+  k.x[0]+= (gyro-k.x[1])*DT;
+  const P=k.P, dt=DT;
+  const p00=P[0][0]-dt*(P[1][0]+P[0][1])+dt*dt*P[1][1]+ (2.5e-5)*dt; // Qa
+  const p01=P[0][1]-dt*P[1][1];
+  const p10=P[1][0]-dt*P[1][1];
+  const p11=P[1][1]+ (5e-8);                                          // Qb random walk
+  k.P=[[p00,p01],[p10,p11]];
+  // update
+  const S=k.P[0][0]+Rm;
+  const K0=k.P[0][0]/S, K1=k.P[1][0]/S;
+  const r=z-k.x[0];
+  k.x[0]+=K0*r; k.x[1]+=K1*r;
+  const q00=(1-K0)*k.P[0][0],           q01=(1-K0)*k.P[0][1];
+  const q10=-K1*k.P[0][0]+k.P[1][0],    q11=-K1*k.P[0][1]+k.P[1][1];
+  k.P=[[q00,q01],[q10,q11]];
+}
+let kf=[];        // [link][axis]
+let prevAxes=[];
+let simT=0;
+function initEst(){
+  simT=0;
+  prevAxes=[0,1,2].map(i=>trueAxes(i,0,false));
+  kf=[0,1,2].map(i=>[KF2(prevAxes[i][0]+0.08*(Math.random()-0.5)), KF2(0), KF2(0)]);
+}
+function estPitch(){return [kf[0][0].x[0], kf[1][0].x[0], kf[2][0].x[0]];}
+function imuStep(cutting){
+  simT+=DT;
+  for(let i=0;i<3;i++){
+    const cur=trueAxes(i,simT,cutting);
+    const rates=trueRates(i,prevAxes[i],cur);
+    prevAxes[i]=cur;
+    for(let a=0;a<3;a++){
+      const gyro=rates[a]+trueBias[i][a]+gauss()*0.010*noiseK;
+      const measN=(a===0?(cutting?0.030:0.010):0.020)*noiseK+1e-4;  // accel-derived pitch/roll; aided yaw
+      const z=cur[a]+gauss()*measN;
+      kfStep(kf[i][a], gyro, z, measN*measN*3+1e-6);
+    }
+  }
+}
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+/* ================= kinematics ================= */
+function fkOf(a){
+  const j1={x:PIV.x+L1*Math.cos(a[0]), y:PIV.y+L1*Math.sin(a[0])};
+  const j2={x:j1.x+L2*Math.cos(a[1]), y:j1.y+L2*Math.sin(a[1])};
+  const tip={x:j2.x+L3*Math.cos(a[2]), y:j2.y+L3*Math.sin(a[2])};
+  return {j1,j2,tip};
+}
+
+/* ================= control ================= */
+// Operator lever commands from keys/pad
+function levers(){
+  const K=demo?vkeys:keys;
+  const b=(K['w']?1:0)-(K['s']?1:0);
+  const s=(K['a']?1:0)-(K['d']?1:0);
+  const k=(K['q']?1:0)-(K['e']?1:0);
+  return {b,s,k};
+}
+function maxTerr(){let m=-1e9;for(let i=0;i<TN;i++){const x=TX0+(TX1-TX0)*i/(TN-1);
+  if(x>=CUT_X0&&x<=CUT_X1)m=Math.max(m,terrain[i]);}return m;}
+/* ===== demo operator: drives the SAME levers + assist a human would ===== */
+function demoStep(){
+  vkeys={};
+  const aE=estPitch(), tip=fkOf(aE).tip;
+  const posX=CUT_X1-0.1, posY=Math.max(0.9, gradeY+1.6);
+  switch(dphase){
+    case 'POSITION': {                 // manual: swing out to the right, above the bench
+      if(assist) setAssist(false);
+      const dx=posX-tip.x, dy=posY-tip.y;
+      if(tip.y<0.55 && Math.abs(dx)>0.6){ vkeys['w']=1; }     // lift clear of the bench first
+      else {
+        if(dx>0.2) vkeys['d']=1; else if(dx<-0.2) vkeys['a']=1;
+        if(dy>0.15) vkeys['w']=1;
+        else if(dy<-0.15 && (tip.y>1.1 || Math.abs(dx)<0.6)) vkeys['s']=1;  // stay high while traversing
+      }
+      if(aE[2]<-1.85) vkeys['e']=1; else if(aE[2]>-1.55) vkeys['q']=1;
+      if(Math.abs(dx)<0.25 && Math.abs(dy)<0.2){ dphase='ENGAGE'; }
+      break; }
+    case 'ENGAGE': {                   // assist on, dial the cut level down one bite
+      if(!assist) setAssist(true);
+      const want=Math.max(gradeY, maxTerr()-0.5);
+      if(tip.x<CUT_X1-0.05) vkeys['d']=1;                     // keep reaching out (stick is the operator's)
+      if(cutLevel>want+0.005) vkeys['s']=1;                    // lower cut level (assist W/S)
+      else if(Math.abs(tip.y-cutLevel)<0.08 && tip.x>CUT_X1-0.25){ dphase='CUT'; stallX=tip.x; stallT=0; }
+      break; }
+    case 'CUT': {                      // operator's only job: crowd the stick
+      vkeys['a']=1;
+      if(tip.x<stallX-0.05){stallX=tip.x;stallT=0;} else stallT+=DT;
+      if(tip.x<CUT_X0+0.15 || stallT>2.0){ dphase='EXIT'; dTimer=0; }
+      break; }
+    case 'EXIT': {                     // curl the bucket, lift out
+      setAssist(false);
+      dTimer+=DT;
+      vkeys['q']=1; vkeys['w']=1;
+      if(dTimer>1.1){
+        if(coverage()>0.985){ dphase='PARK'; dTimer=0; }
+        else dphase='POSITION';
+      }
+      break; }
+    case 'PARK': {
+      dTimer+=DT;
+      const dy=1.6-tip.y;
+      if(dy>0.2) vkeys['w']=1;
+      if(aE[2]>-2.0) vkeys['q']=1;
+      if(dTimer>2.2){ demo=false; vkeys={}; $('btnDemo').classList.remove('on'); }
+      break; }
+  }
+}
+function control(){
+  const lv=levers();
+  const aE=estPitch();
+  if(!assist){
+    return [lv.b*OP.boom,
+            lv.s>0? -OP.stick : lv.s<0? OP.stick : 0,     // A crowds in (q2 more negative)
+            lv.k>0? -OP.bucket : lv.k<0? OP.bucket : 0];  // Q curls (q3 more negative)
+  }
+  // ASSIST: operator drives stick + adjusts cut level; controller solves boom & bucket
+  if(lv.b) cutLevel=Math.min(0.8, Math.max(gradeY, cutLevel+lv.b*0.35*DT));
+  const ds=lv.s>0? -OP.stick : lv.s<0? OP.stick : 0;
+  const f=fkOf(aE), tip=f.tip;
+  const c=[Math.cos(aE[0]),Math.cos(aE[1]),Math.cos(aE[2])];
+  const Jy=[L1*c[0]+L2*c[1]+L3*c[2], L2*c[1]+L3*c[2], L3*c[2]];
+  const vy=4.0*(cutLevel-tip.y);
+  const w =2.5*(DIG_ABS-aE[2]);
+  // [Jy0 Jy2; 1 1][d1 d3]' = [vy - Jy1*ds ; w - ds]
+  const A00=Jy[0],A01=Jy[2],A10=1,A11=1;
+  const b0=vy-Jy[1]*ds, b1=w-ds;
+  const det=A00*A11-A01*A10;
+  let d1=0,d3=0;
+  if(Math.abs(det)>1e-6){ d1=(b0*A11-A01*b1)/det; d3=(A00*b1-b0*A10)/det; }
+  return [clampR(d1), ds, clampR(d3)];
+}
+const clampR=v=>Math.max(-RATE,Math.min(RATE,v));
+
+/* ================= plant + digging ================= */
+function plant(cmd){
+  for(let i=0;i<3;i++){
+    qdot[i]+=(cmd[i]-qdot[i])*Math.min(1,DT*9);
+    q[i]+=qdot[i]*DT;
+    if(q[i]<JLIM[i][0]){q[i]=JLIM[i][0];qdot[i]=Math.max(0,qdot[i]);}
+    if(q[i]>JLIM[i][1]){q[i]=JLIM[i][1];qdot[i]=Math.min(0,qdot[i]);}
+  }
+  const tip=fkOf(absAngles(q)).tip;
+  let cutting=false;
+  for(let i=0;i<TN;i++){
+    const x=TX0+(TX1-TX0)*i/(TN-1);
+    if(Math.abs(x-tip.x)<0.34 && tip.y<terrain[i]){
+      terrain[i]=Math.max(tip.y, gradeY-0.35); cutting=true;
+    }
+  }
+  // pass detection while assist on
+  if(assist){
+    if(tip.x>CUT_X1-0.3) passArm=true;
+    if(passArm && tip.x<CUT_X0+0.3){ passN++; passArm=false; }
+  }
+  return cutting;
+}
+function coverage(){
+  let ok=0,n=0;
+  for(let i=0;i<TN;i++){const x=TX0+(TX1-TX0)*i/(TN-1);
+    if(x>=CUT_X0&&x<=CUT_X1){n++; if(terrain[i]<=gradeY+0.04) ok++;}}
+  return n?ok/n:0;
+}
+function initTerrain(){
+  terrain=[];
+  for(let i=0;i<TN;i++){
+    const x=TX0+(TX1-TX0)*i/(TN-1);
+    terrain.push(Math.max(0.02, 0.18+0.22*Math.sin(x*1.1+0.7)+0.12*Math.sin(x*2.9)+0.05*Math.sin(x*7.3)));
+  }
+}
+
+/* ================= drawing ================= */
+const W=document.getElementById('world'), ctx=W.getContext('2d');
+const SC=54, OX=6.6*SC, OY=7.0*SC;      // view: x∈[-6.6,13.7], y∈[-2.8,+7.0] — boom fully visible at max raise
+const w2s=(x,y)=>[OX+x*SC, OY-y*SC];
+function line(a,b,w,col,dash){ctx.beginPath();ctx.setLineDash(dash||[]);ctx.moveTo(...a);ctx.lineTo(...b);
+  ctx.lineWidth=w;ctx.strokeStyle=col;ctx.lineCap='round';ctx.stroke();ctx.setLineDash([]);}
+function pin(p,r=5){ctx.beginPath();ctx.arc(p[0],p[1],r,0,7);ctx.fillStyle='#23272c';ctx.fill();
+  ctx.beginPath();ctx.arc(p[0],p[1],r*0.45,0,7);ctx.fillStyle='#5a6068';ctx.fill();}
+function cyl(p1,p2,frac){
+  const mx=p1[0]+(p2[0]-p1[0])*frac, my=p1[1]+(p2[1]-p1[1])*frac;
+  line([mx,my],p2,4.5,'#e0e4e8');
+  line(p1,[mx,my],9,'#b23327'); line(p1,[mx,my],5,'#e5442f');
+  pin(p1,4.5); pin(p2,4.5);
+}
+function draw(){
+  ctx.clearRect(0,0,W.width,W.height);
+  ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=1;
+  for(let x=-6;x<=13;x++){const [px]=w2s(x,0);ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,W.height);ctx.stroke();}
+  for(let y=-3;y<=7;y++){const [,py]=w2s(0,y);ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(W.width,py);ctx.stroke();}
+  // terrain
+  const g0=w2s(-6.6,0), g1=w2s(TX0,0);
+  ctx.beginPath();ctx.moveTo(g0[0],g0[1]);ctx.lineTo(g1[0],g1[1]);
+  for(let i=0;i<TN;i++){const x=TX0+(TX1-TX0)*i/(TN-1);const p=w2s(x,terrain[i]);ctx.lineTo(p[0],p[1]);}
+  const gr=w2s(13.7,0);ctx.lineTo(gr[0],gr[1]);
+  ctx.lineTo(gr[0],W.height);ctx.lineTo(g0[0],W.height);ctx.closePath();
+  ctx.fillStyle='#31363d';ctx.fill();
+  ctx.strokeStyle='#6b7078';ctx.lineWidth=2;ctx.stroke();
+  // final grade line
+  const ga=w2s(CUT_X0,gradeY), gb=w2s(CUT_X1,gradeY);
+  line(ga,gb,2,'#ff8a1e',[7,5]);
+  ctx.fillStyle='#ff8a1e';ctx.font='11px IBM Plex Mono';
+  ctx.fillText('GRADE '+gradeY.toFixed(2), gb[0]+8, gb[1]+4);
+  // active cut level (assist)
+  if(assist){
+    const ca=w2s(CUT_X0-0.3,cutLevel), cb=w2s(CUT_X1+0.5,cutLevel);
+    line(ca,cb,1.2,'#38d996',[3,5]);
+    ctx.fillStyle='#38d996';ctx.fillText('CUT '+cutLevel.toFixed(2), cb[0]+8, cb[1]+4);
+  }
+  drawBody();
+  const aT=absAngles(q), f=fkOf(aT);
+  const pv=w2s(PIV.x,PIV.y), j1=w2s(f.j1.x,f.j1.y), j2=w2s(f.j2.x,f.j2.y), tp=w2s(f.tip.x,f.tip.y);
+  // boom cylinder: base pinned to pedestal bracket on the house deck
+  const cylBase=w2s(0.85,1.1);
+  const bm=[pv[0]+(j1[0]-pv[0])*0.5, pv[1]+(j1[1]-pv[1])*0.5];
+  cyl(cylBase, bm, 0.55);
+  cyl([pv[0]+(j1[0]-pv[0])*0.8, pv[1]+(j1[1]-pv[1])*0.8-10], j2, 0.5);
+  cyl([j1[0]+(j2[0]-j1[0])*0.35, j1[1]+(j2[1]-j1[1])*0.35],
+      [j2[0]+(tp[0]-j2[0])*0.35, j2[1]+(tp[1]-j2[1])*0.35], 0.55);
+  line(pv,j1,15,'#c98314'); line(pv,j1,11,'#f0a02a');
+  line(j1,j2,12,'#c98314'); line(j1,j2,8.5,'#f0a02a');
+  drawBucket(j2,tp);
+  pin(pv,6); pin(j1,5.5); pin(j2,5.5);
+  imuChip(pv,j1,0.62,'IMU-1'); imuChip(j1,j2,0.5,'IMU-2'); imuChip(j2,tp,0.35,'IMU-3');
+  // estimated ghost + tip crosshair
+  const aE=estPitch(), fE=fkOf(aE);
+  const pj1=w2s(fE.j1.x,fE.j1.y), pj2=w2s(fE.j2.x,fE.j2.y), pt=w2s(fE.tip.x,fE.tip.y);
+  ctx.globalAlpha=0.55;
+  line(pv,pj1,2,'#38d996',[4,4]); line(pj1,pj2,2,'#38d996',[4,4]); line(pj2,pt,2,'#38d996',[4,4]);
+  ctx.globalAlpha=1;
+  ctx.strokeStyle='#38d996';ctx.lineWidth=1.6;
+  ctx.beginPath();ctx.arc(pt[0],pt[1],7,0,7);ctx.stroke();
+  line([pt[0]-11,pt[1]],[pt[0]+11,pt[1]],1.6,'#38d996');
+  line([pt[0],pt[1]-11],[pt[0],pt[1]+11],1.6,'#38d996');
+  ctx.fillStyle='#c3ccd5';ctx.font='600 13px Chakra Petch';
+  ctx.fillText(demo?('DEMO OPERATOR — '+dphase+' (press any control to take over)')
+    :assist?'AUTOMATION ON — holding cut level · you drive the stick (A/D)'
+    :'MANUAL — W/S boom · A/D stick · Q/E bucket · G automation', 14, 24);
+}
+function imuChip(a,b,f,txt){
+  const x=a[0]+(b[0]-a[0])*f, y=a[1]+(b[1]-a[1])*f;
+  ctx.fillStyle='#12161a';ctx.strokeStyle='#38d996';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(x-19,y-8,38,15,3);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#38d996';ctx.font='8px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText(txt,x,y+3);ctx.textAlign='left';
+}
+function drawBody(){
+  const r=(x,y,w,h,rad,fill)=>{const p=w2s(x,y);ctx.beginPath();
+    ctx.roundRect(p[0],p[1],w*SC,h*SC,rad);ctx.fillStyle=fill;ctx.fill();};
+  r(-5.6,0.9,4.9,0.9,24,'#c9ced4'); r(-5.35,0.72,4.4,0.55,13,'#23272c');
+  for(let i=0;i<7;i++){const p=w2s(-5.1+i*0.62,0.35);ctx.beginPath();ctx.arc(p[0],p[1],0.16*SC,0,7);ctx.fillStyle='#8b9198';ctx.fill();}
+  r(-5.5,2.15,4.3,1.15,7,'#f0a02a');
+  r(-5.1,2.05,1.1,0.55,4,'#23272c');
+  r(-2.6,2.85,1.55,1.55,6,'#f0a02a');
+  r(-2.42,2.68,1.2,1.15,4,'#23272c');
+  r(-2.32,2.58,1.0,0.9,3,'#bfe3ef');
+  const e=w2s(-4.6,2.5);ctx.beginPath();ctx.ellipse(e[0],e[1],0.55*SC,0.28*SC,0,0,7);ctx.fillStyle='#23272c';ctx.fill();
+  // boom foot pedestal — carries both the boom pin and the boom-cylinder base pin
+  r(-1.0,2.0,2.1,1.0,5,'#f0a02a');       // boom foot pedestal
+  r(0.55,1.32,0.62,0.4,3,'#d98d18');     // boom-cylinder base bracket (carries the pin)
+}
+function drawBucket(j2,tp){
+  const dx=tp[0]-j2[0], dy=tp[1]-j2[1], nx=-dy*0.30, ny=dx*0.30;
+  ctx.beginPath();ctx.moveTo(j2[0],j2[1]);
+  ctx.quadraticCurveTo(j2[0]+dx*0.45+nx, j2[1]+dy*0.45+ny, tp[0],tp[1]);
+  ctx.lineTo(tp[0]-dx*0.18-nx*0.5, tp[1]-dy*0.18-ny*0.5);
+  ctx.quadraticCurveTo(j2[0]+dx*0.4+nx*0.35, j2[1]+dy*0.4+ny*0.35, j2[0]+nx*0.12, j2[1]+ny*0.12);
+  ctx.closePath();ctx.fillStyle='#2b2f35';ctx.fill();ctx.strokeStyle='#171a1e';ctx.lineWidth=2;ctx.stroke();
+}
+
+/* ================= grade bar + strips + readouts ================= */
+const GB=document.getElementById('gbar'), gctx=GB.getContext('2d');
+function drawGradeBar(err){
+  gctx.clearRect(0,0,GB.width,GB.height);
+  const H=GB.height, mid=H/2, R=1.2;
+  gctx.fillStyle='#20272f'; gctx.fillRect(14,6,16,H-12);
+  const tol=0.05/R*(H/2-6);
+  gctx.fillStyle='rgba(56,217,150,.25)'; gctx.fillRect(14,mid-tol,16,tol*2);
+  gctx.strokeStyle='#ff8a1e';gctx.lineWidth=2;
+  gctx.beginPath();gctx.moveTo(8,mid);gctx.lineTo(36,mid);gctx.stroke();
+  const yy=mid-Math.max(-1,Math.min(1,err/R))*(H/2-6);
+  const c=Math.abs(err)<0.05?'#38d996':(Math.abs(err)<0.2?'#ffc53d':'#ff8a1e');
+  gctx.fillStyle=c;gctx.beginPath();
+  gctx.moveTo(34,yy);gctx.lineTo(42,yy-6);gctx.lineTo(42,yy+6);gctx.closePath();gctx.fill();
+  const v=document.getElementById('gbval');
+  v.textContent=(err>=0?'+':'')+err.toFixed(2); v.style.color=c;
+}
+const strips=[1,2,3].map(i=>document.getElementById('s'+i).getContext('2d'));
+function pushHist(){
+  const aE=estPitch(), jE=[aE[0],aE[1]-aE[0],aE[2]-aE[1]];
+  for(let i=0;i<3;i++){hist[i].push([q[i],jE[i]]); if(hist[i].length>HMAX)hist[i].shift();}
+}
+function drawStrips(){
+  for(let i=0;i<3;i++){
+    const c=strips[i], h=hist[i], Wp=c.canvas.width, Hp=c.canvas.height;
+    c.clearRect(0,0,Wp,Hp);
+    if(h.length<2)continue;
+    let lo=1e9,hi=-1e9;for(const p of h){lo=Math.min(lo,p[0],p[1]);hi=Math.max(hi,p[0],p[1]);}
+    const sp=Math.max(hi-lo,0.15); lo-=0.08*sp; const rng=sp*1.16;
+    const Y=v=>Hp-3-(v-lo)/rng*(Hp-6), X=k=>k/(HMAX-1)*Wp;
+    c.lineWidth=1.2;
+    for(const [idx,col] of [[0,'rgba(232,237,242,0.35)'],[1,'#38d996']]){
+      c.strokeStyle=col;c.beginPath();
+      h.forEach((p,k)=>{k?c.lineTo(X(k),Y(p[idx])):c.moveTo(X(0),Y(p[idx]))});
+      c.stroke();
+    }
+  }
+}
+const $=id=>document.getElementById(id);
+const deg=r=>(r*180/Math.PI).toFixed(1)+'°';
+function readouts(){
+  const aE=estPitch(), jE=[aE[0],aE[1]-aE[0],aE[2]-aE[1]];
+  for(let i=0;i<3;i++){
+    $('e'+(i+1)).textContent=deg(jE[i]);
+    $('t'+(i+1)).textContent=deg(q[i]);
+    $('d'+(i+1)).textContent='Δ'+((jE[i]-q[i])*180/Math.PI).toFixed(2)+'°';
+    $('r'+(i+1)).textContent=(kf[i][1].x[0]*180/Math.PI).toFixed(1)+'°';
+    $('y'+(i+1)).textContent=(kf[i][2].x[0]*180/Math.PI).toFixed(1)+'°';
+    $('b'+(i+1)).textContent=(kf[i][0].x[1]*180/Math.PI).toFixed(2);
+    $('bt'+(i+1)).textContent='(true '+(trueBias[i][0]*180/Math.PI).toFixed(2)+')';
+  }
+  const fE=fkOf(aE).tip, fT=fkOf(absAngles(q)).tip;
+  $('tx').textContent=fE.x.toFixed(2); $('ty').textContent=fE.y.toFixed(2);
+  $('fkerr').textContent=(Math.hypot(fE.x-fT.x,fE.y-fT.y)*100).toFixed(1);
+  $('cutlvl').textContent=assist?cutLevel.toFixed(2):'—';
+  $('pass').textContent=passN;
+  const cov=coverage(); $('covLbl').textContent=(cov*100).toFixed(0)+'%';
+  $('progress').style.width=(cov*100)+'%';
+  const ref=assist?cutLevel:gradeY;
+  $('gblbl').innerHTML=assist?'Depth to<br>cut level':'Depth<br>to grade';
+  drawGradeBar(fE.y-ref);
+  const st=$('status');
+  if(demo){st.textContent='DEMO · '+dphase+(assist?' · CUT '+cutLevel.toFixed(2)+' m':'');st.className='assist';}
+  else if(assist){st.textContent='AUTOMATION · CUT '+cutLevel.toFixed(2)+' m';st.className='assist';}
+  else{st.textContent='MANUAL CONTROL';st.className='';}
+}
+
+/* ================= loop ================= */
+let last=0, wasCutting=false;
+function frame(ts){
+  requestAnimationFrame(frame);
+  if(!last)last=ts; let el=Math.min((ts-last)/1000,0.05); last=ts;
+  let acc=el;
+  while(acc>0){
+    if(demo) demoStep();
+    imuStep(wasCutting);
+    wasCutting=plant(control());
+    histAcc+=DT; if(histAcc>=4*DT){histAcc=0;pushHist();}
+    acc-=DT;
+  }
+  draw(); drawStrips(); readouts();
+}
+requestAnimationFrame(frame);
+
+/* ================= input ================= */
+addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if('wasdqe'.includes(k)){if(demo)stopDemo();keys[k]=true;e.preventDefault();}
+  if(k==='g'){if(demo)stopDemo();toggleAssist();}
+});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+addEventListener('blur',()=>{keys={};});
+for(const b of document.querySelectorAll('.pad button')){
+  const k=b.dataset.k;
+  const on=e=>{e.preventDefault();if(demo)stopDemo();keys[k]=true;b.classList.add('active');};
+  const off=()=>{keys[k]=false;b.classList.remove('active');};
+  b.addEventListener('pointerdown',on);
+  b.addEventListener('pointerup',off); b.addEventListener('pointerleave',off); b.addEventListener('pointercancel',off);
+}
+function setAssist(on){
+  if(assist===on) return;
+  assist=on; passArm=false;
+  if(assist){
+    const tipY=fkOf(estPitch()).tip.y;
+    cutLevel=Math.min(0.8, Math.max(gradeY, tipY));
+  }
+  $('btnAssist').classList.toggle('on',assist);
+}
+function toggleAssist(){ setAssist(!assist); }
+$('btnAssist').onclick=()=>{if(demo)stopDemo();toggleAssist();};
+function startDemo(){ demo=true; dphase='POSITION'; vkeys={}; keys={};
+  $('btnDemo').classList.add('on'); }
+function stopDemo(){ demo=false; vkeys={}; $('btnDemo').classList.remove('on'); }
+$('btnDemo').onclick=()=>{ demo?stopDemo():startDemo(); };
+$('btnReset').onclick=()=>{
+  stopDemo(); dphase='POSITION';
+  q=[0.85,-0.85,-1.15]; qdot=[0,0,0]; assist=false; passN=0; passArm=false; keys={};
+  $('btnAssist').classList.remove('on');
+  initIMU(); initEst(); initTerrain(); hist=[[],[],[]];
+};
+$('grade').oninput=e=>{gradeY=+e.target.value;$('gradeLbl').textContent=gradeY.toFixed(2)+' m';
+  cutLevel=Math.max(cutLevel,gradeY);};
+$('noise').oninput=e=>{noiseK=+e.target.value;$('noiseLbl').textContent=noiseK.toFixed(1)+'×';};
+initIMU(); initEst(); initTerrain(); startDemo();
+</script>
+</body>
+</html>

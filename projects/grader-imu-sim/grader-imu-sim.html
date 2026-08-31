@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motor Grader Automation — IMU State Estimation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14181d; --panel:#1b2129; --panel2:#20272f; --line:#2b333d;
+  --ink:#e8edf2; --dim:#8b98a5; --faint:#5a6673;
+  --orange:#ff8a1e; --green:#38d996; --amber:#ffc53d; --red:#ff5252;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --disp:'Chakra Petch',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--disp);padding:14px 16px 28px}
+.wrap{max-width:1180px;margin:0 auto}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+h1{font-size:17px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+h1 span{color:var(--orange)}
+#status{font-family:var(--mono);font-size:12px;padding:4px 10px;border:1px solid var(--line);border-radius:3px;color:var(--dim);letter-spacing:.05em}
+#status.assist{color:var(--green);border-color:#265a45}
+.hbtns{margin-left:auto;display:flex;gap:8px}
+button{font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:7px 16px;cursor:pointer;user-select:none;-webkit-user-select:none}
+button:hover{border-color:var(--dim)}
+button.primary{background:var(--orange);border-color:var(--orange);color:#181008}
+button.on{background:var(--green);border-color:var(--green);color:#08201a}
+button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.stage{display:flex;gap:10px}
+.canvasbox{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+canvas#world{display:block;width:100%;height:auto}
+.gradebar{width:64px;background:var(--panel);border:1px solid var(--line);border-radius:6px;
+  display:flex;flex-direction:column;align-items:center;padding:8px 0 6px;gap:6px}
+.gradebar .lbl{font-size:9px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;text-align:center;line-height:1.3}
+#gbval{font-family:var(--mono);font-size:11px;color:var(--green)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr) 320px;gap:10px;margin-top:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.card h2{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;display:flex;justify-content:space-between}
+.card h2 .tag{color:var(--orange)}
+.angles{font-family:var(--mono);font-size:12px;line-height:1.65}
+.angles .est{color:var(--green);font-weight:600;font-size:16px}
+.angles .tru{color:var(--faint)}
+.angles .err{color:var(--dim)}
+.axrow{font-family:var(--mono);font-size:10.5px;color:var(--dim);line-height:1.6}
+.axrow b{color:var(--ink);font-weight:500}
+.axrow .bias{color:var(--amber)}
+canvas.strip{width:100%;height:48px;display:block;margin-top:6px;background:var(--panel2);border-radius:3px}
+.kv{font-family:var(--mono);font-size:12px;line-height:1.85}
+.kv b{color:var(--green);font-weight:600}
+.kv .o{color:var(--orange)}
+.slider{margin-top:8px}
+.slider label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;font-family:var(--mono)}
+.slider input{width:100%;accent-color:var(--orange)}
+.progresswrap{height:8px;background:var(--panel2);border-radius:4px;margin-top:4px;overflow:hidden}
+#progress{height:100%;width:0%;background:var(--green);transition:width .2s}
+.pad{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.pad button{padding:10px 4px;font-size:11px;color:#dfe6ec;touch-action:none;display:flex;align-items:center;justify-content:center;gap:5px}
+.pad button kbd{margin:0}
+.pad button.active{background:var(--orange);border-color:var(--orange);color:#181008}
+.keys{font-family:var(--mono);font-size:11.5px;color:#aeb9c4;margin-top:10px;line-height:2.1}
+.keys b{color:var(--ink)}
+kbd{display:inline-block;min-width:20px;text-align:center;padding:2px 6px;margin:0 1px;
+  background:#2e3742;border:1px solid #4a5560;border-bottom-width:2px;border-radius:4px;
+  color:#fff;font-family:var(--mono);font-size:11px;font-weight:600}
+.legend{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:3px;margin-right:5px;vertical-align:middle;border-radius:1px}
+@media (max-width:980px){.grid{grid-template-columns:1fr 1fr}.stage{flex-direction:column}
+ .gradebar{flex-direction:row;width:100%;height:58px;padding:0 10px}}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Motor Grader Automation <span>//</span> IMU State Estimation</h1>
+  <div id="status">MANUAL CONTROL</div>
+  <div class="hbtns">
+    <button id="btnDemo">Demo</button>
+    <button id="btnAssist" class="primary">Automation [G]</button>
+    <button id="btnReset">Reset</button>
+  </div>
+</header>
+
+<div class="stage">
+  <div class="canvasbox"><canvas id="world" width="1100" height="400"></canvas></div>
+  <div class="gradebar">
+    <div class="lbl" id="gblbl">Depth<br>to grade</div>
+    <canvas id="gbar" width="44" height="250"></canvas>
+    <div id="gbval">+0.00</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h2>Mainframe pitch <span class="tag">IMU-F</span></h2>
+    <div class="angles">
+      <div class="est" id="e1">--.-°</div>
+      <div class="tru">true <span id="t1">--.-°</span> <span class="err" id="d1"></span></div>
+    </div>
+    <div class="axrow">b̂<sub>g</sub> <span class="bias" id="b1">--</span>°/s <span id="bt1" style="color:var(--faint)"></span></div>
+    <canvas class="strip" id="s1" width="300" height="48"></canvas>
+  </div>
+  <div class="card">
+    <h2>Drawbar pitch <span class="tag">IMU-D</span></h2>
+    <div class="angles">
+      <div class="est" id="e2">--.-°</div>
+      <div class="tru">true <span id="t2">--.-°</span> <span class="err" id="d2"></span></div>
+    </div>
+    <div class="axrow">b̂<sub>g</sub> <span class="bias" id="b2">--</span>°/s <span id="bt2" style="color:var(--faint)"></span></div>
+    <canvas class="strip" id="s2" width="300" height="48"></canvas>
+  </div>
+  <div class="card">
+    <h2>Cutting edge elev <span class="tag">LSR+IMU</span></h2>
+    <div class="angles">
+      <div class="est" id="e3">--.-- m</div>
+      <div class="tru">true <span id="t3">--.-- m</span> <span class="err" id="d3"></span></div>
+    </div>
+    <div class="axrow">b̂<sub>vz</sub> <span class="bias" id="b3">--</span> cm/s <span id="bt3" style="color:var(--faint)"></span></div>
+    <canvas class="strip" id="s3" width="300" height="48"></canvas>
+  </div>
+  <div class="card">
+    <h2>Machine — grade automation</h2>
+    <div class="kv">
+      blade X <b id="tx">--</b>&nbsp; elev <b id="ty">--</b> m &nbsp;·&nbsp; est err <span class="o" id="fkerr">--</span> cm<br>
+      cut level <b id="cutlvl">--</b> m &nbsp;·&nbsp; pass <span class="o" id="pass">0</span> &nbsp;·&nbsp; speed <b id="spd">0.0</b> m/s
+    </div>
+    <div class="pad">
+      <button data-k="w"><kbd>W</kbd> Blade ▲</button><button data-k="d"><kbd>D</kbd> Drive ▶</button>
+      <button data-k="s"><kbd>S</kbd> Blade ▼</button><button data-k="a"><kbd>A</kbd> Reverse ◀</button>
+    </div>
+    <div class="keys">
+      <kbd>A</kbd><kbd>D</kbd> drive &nbsp; <kbd>W</kbd><kbd>S</kbd> blade lift &nbsp; <kbd>G</kbd> automation<br>
+      Automation on: it controls the <b>blade lift cylinders</b> to hold the cutting edge on the cut level —
+      you drive with <kbd>A</kbd><kbd>D</kbd>, and <kbd>W</kbd><kbd>S</kbd> raise/lower the cut level.
+      (Side view shows elevation; on the real machine the same system also holds <b>cross slope</b> via the follower lift cylinder.)
+    </div>
+    <div class="slider"><label>Final grade <span id="gradeLbl">0.00 m</span></label>
+      <input type="range" id="grade" min="-0.4" max="0.3" step="0.05" value="0"></div>
+    <div class="slider"><label>Sensor noise <span id="noiseLbl">1.0×</span></label>
+      <input type="range" id="noise" min="0" max="3" step="0.1" value="1"></div>
+    <div class="slider"><label>Grade coverage <span id="covLbl">0%</span></label>
+      <div class="progresswrap"><div id="progress"></div></div></div>
+    <div class="legend">
+      <span><i style="background:var(--green)"></i>estimate</span>
+      <span><i style="background:#e8edf2;opacity:.5"></i>true</span>
+      <span><i style="background:var(--orange)"></i>final grade</span>
+      <span><i style="background:var(--green);height:1px"></i>cut level</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+'use strict';
+/* ================= machine constants ================= */
+const WB=6.2;                 // wheelbase: rear tandem centre -> front axle
+const RR=0.68, RF=0.60;       // wheel radii
+const TAN=0.78;               // tandem wheel half-spacing
+const XB_OFS=2.3;             // blade x ahead of rear tandem centre
+const BLADE_OFS=0.85;         // blade attach height above frame axle line
+const LIFT_MIN=0.15, LIFT_MAX=2.6;
+const LIFT_RATE=0.45;         // m/s cylinder rate limit (at cutting edge)
+const VMAX=1.35;              // m/s propel
+const CUT_X0=4.0, CUT_X1=22.0;
+const XR_MIN=0.8, XR_MAX=24.5;
+const DT=1/120;
+
+/* ================= state ================= */
+let xr=1.2, v=0;              // rear tandem centre x, machine speed
+let lift=0.6, liftDot=0;      // blade lift extension (m at cutting edge), actuator
+let auto=false, cutLevel=0.3, gradeY=0.0, noiseK=1.0, passN=0, passArm=false;
+let terrain=[], TX0=0, TX1=32, TN=321;
+let keys={}, demo=false, dphase='TO_START', vkeys={}, dTimer=0;
+let hist=[[],[],[]]; const HMAX=12/DT/4; let histAcc=0;
+let simT=0;
+
+function terrAt(x){
+  const i=(x-TX0)/(TX1-TX0)*(TN-1);
+  const i0=Math.max(0,Math.min(TN-2,Math.floor(i))), f=i-i0;
+  return terrain[i0]*(1-f)+terrain[i0+1]*f;
+}
+function initTerrain(){
+  terrain=[];
+  for(let i=0;i<TN;i++){
+    const x=TX0+(TX1-TX0)*i/(TN-1);
+    let h=0.06;
+    if(x>2.5&&x<23.5){
+      const w=Math.min(1,(x-2.5)/1.5)*Math.min(1,(23.5-x)/1.5);
+      h=0.06+w*(0.22+0.16*Math.sin(x*0.9+0.6)+0.10*Math.sin(x*2.2+2.1)+0.05*Math.sin(x*5.1));
+    }
+    terrain.push(h);
+  }
+}
+
+/* ================= machine truth kinematics ================= */
+function machinePose(){
+  const rearY=(terrAt(xr-TAN)+terrAt(xr+TAN))/2+RR;    // tandem bogie averages the two wheels
+  const xf=xr+WB;
+  const frontY=terrAt(xf)+RF;
+  const pitch=Math.atan2(frontY-rearY,WB);
+  const xb=xr+XB_OFS;
+  const frameYb=rearY+(frontY-rearY)*(XB_OFS/WB);
+  const tipY=frameYb+BLADE_OFS-lift;
+  const dbPitch=pitch*0.6-0.16*(lift-1.2);             // drawbar hangs off the front nose
+  return {rearY,xf,frontY,pitch,xb,frameYb,tipY,dbPitch};
+}
+
+/* ================= 2-state Kalman filter (state, input-bias) ================= */
+function KF2(a0){ return {x:[a0,0], P:[[0.02,0],[0,0.0004]]}; }
+function kfStep(k, u, z, Rm, Qa, Qb){
+  k.x[0]+=(u-k.x[1])*DT;
+  const P=k.P, dt=DT;
+  const p00=P[0][0]-dt*(P[1][0]+P[0][1])+dt*dt*P[1][1]+Qa*dt;
+  const p01=P[0][1]-dt*P[1][1];
+  const p10=P[1][0]-dt*P[1][1];
+  const p11=P[1][1]+Qb;
+  k.P=[[p00,p01],[p10,p11]];
+  const S=k.P[0][0]+Rm, K0=k.P[0][0]/S, K1=k.P[1][0]/S, r=z-k.x[0];
+  k.x[0]+=K0*r; k.x[1]+=K1*r;
+  const q00=(1-K0)*k.P[0][0],        q01=(1-K0)*k.P[0][1];
+  const q10=-K1*k.P[0][0]+k.P[1][0], q11=-K1*k.P[0][1]+k.P[1][1];
+  k.P=[[q00,q01],[q10,q11]];
+}
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+let kfF, kfD, kfE;            // frame pitch, drawbar pitch, cutting-edge elevation
+let biasF, biasD, biasE;      // true sensor biases (gyro, gyro, vertical-rate)
+let prevPose=null;
+function initEst(){
+  const p=machinePose();
+  biasF=(Math.random()-0.5)*0.030;
+  biasD=(Math.random()-0.5)*0.030;
+  biasE=(Math.random()-0.5)*0.040;   // m/s vertical-rate bias
+  kfF=KF2(p.pitch+0.04*(Math.random()-0.5));
+  kfD=KF2(p.dbPitch+0.04*(Math.random()-0.5));
+  kfE=KF2(p.tipY+0.05*(Math.random()-0.5));
+  prevPose=p; simT=0;
+}
+function imuStep(cutting){
+  simT+=DT;
+  const p=machinePose();
+  const rF=(p.pitch-prevPose.pitch)/DT, rD=(p.dbPitch-prevPose.dbPitch)/DT,
+        vz=(p.tipY-prevPose.tipY)/DT;
+  prevPose=p;
+  const vib=(cutting?0.020:0.008)*noiseK;
+  // mainframe IMU: gyro + inclinometer
+  kfF.kfid=1;
+  kfStep(kfF, rF+biasF+gauss()*0.010*noiseK, p.pitch+gauss()*vib+gauss()*0.006*noiseK,
+         Math.pow(vib+0.006*noiseK,2)*3+1e-6, 2.5e-5, 5e-8);
+  // drawbar IMU
+  kfStep(kfD, rD+biasD+gauss()*0.010*noiseK, p.dbPitch+gauss()*vib+gauss()*0.006*noiseK,
+         Math.pow(vib+0.006*noiseK,2)*3+1e-6, 2.5e-5, 5e-8);
+  // cutting edge elevation: laser receiver on mast + blade-IMU vertical rate
+  const zN=0.012*noiseK+1e-4;
+  kfStep(kfE, vz+biasE+gauss()*0.020*noiseK, p.tipY+gauss()*zN,
+         zN*zN*3+1e-6, 1e-4, 2e-7);
+}
+
+/* ================= operator + automation ================= */
+function levers(){
+  const K=demo?vkeys:keys;
+  return {b:(K['w']?1:0)-(K['s']?1:0), d:(K['d']?1:0)-(K['a']?1:0)};
+}
+function control(){
+  const lv=levers();
+  // propel is ALWAYS the operator's
+  const vCmd=lv.d*VMAX;
+  let liftCmd=0;
+  if(!auto){
+    liftCmd=-lv.b*LIFT_RATE;               // W raises tip -> retract lift
+  } else {
+    if(lv.b) cutLevel=Math.min(0.8, Math.max(gradeY, cutLevel+lv.b*0.30*DT));
+    const estTip=kfE.x[0];
+    liftCmd=Math.max(-LIFT_RATE,Math.min(LIFT_RATE, -6.0*(cutLevel-estTip)));
+  }
+  return {vCmd, liftCmd};
+}
+function plant(cmd){
+  v+=(cmd.vCmd-v)*Math.min(1,DT*2.2);
+  xr+=v*DT;
+  if(xr<XR_MIN){xr=XR_MIN;v=Math.max(0,v);}
+  if(xr>XR_MAX){xr=XR_MAX;v=Math.min(0,v);}
+  liftDot+=(cmd.liftCmd-liftDot)*Math.min(1,DT*10);
+  lift+=liftDot*DT;
+  if(lift<LIFT_MIN){lift=LIFT_MIN;liftDot=Math.max(0,liftDot);}
+  if(lift>LIFT_MAX){lift=LIFT_MAX;liftDot=Math.min(0,liftDot);}
+  // cutting: blade removes soil above its edge
+  const p=machinePose();
+  let cutting=false;
+  for(let i=0;i<TN;i++){
+    const x=TX0+(TX1-TX0)*i/(TN-1);
+    if(Math.abs(x-p.xb)<0.35 && p.tipY<terrain[i]){
+      terrain[i]=Math.max(p.tipY, gradeY-0.30); cutting=true;
+    }
+  }
+  if(auto){
+    if(p.xb<CUT_X0+0.3) passArm=true;
+    if(passArm && p.xb>CUT_X1-0.3){ passN++; passArm=false; }
+  }
+  return cutting;
+}
+function maxTerr(){let m=-1e9;for(let i=0;i<TN;i++){const x=TX0+(TX1-TX0)*i/(TN-1);
+  if(x>=CUT_X0&&x<=CUT_X1)m=Math.max(m,terrain[i]);}return m;}
+function coverage(){
+  let ok=0,n=0;
+  for(let i=0;i<TN;i++){const x=TX0+(TX1-TX0)*i/(TN-1);
+    if(x>=CUT_X0&&x<=CUT_X1){n++; if(terrain[i]<=gradeY+0.03 && terrain[i]>=gradeY-0.08) ok++;}}
+  return n?ok/n:0;
+}
+
+/* ================= demo operator (uses the same levers + toggle) ================= */
+function demoStep(){
+  vkeys={};
+  const p=machinePose(), estTip=kfE.x[0];
+  switch(dphase){
+    case 'TO_START': {                       // manual: back up with the blade carried high
+      if(auto) setAuto(false);
+      if(estTip<terrAt(p.xb)+0.35) vkeys['w']=1;      // keep the edge clear while travelling
+      if(xr>XR_MIN+0.4) vkeys['a']=1;
+      else if(Math.abs(v)<0.05){ dphase='ENGAGE'; }
+      break; }
+    case 'ENGAGE': {                         // automation on, dial the next thin cut
+      if(!auto) setAuto(true);
+      const want=Math.max(gradeY, maxTerr()-0.15);    // graders take thin passes
+      if(cutLevel>want+0.005) vkeys['s']=1;
+      else dphase='CUT';
+      break; }
+    case 'CUT': {                            // operator's job: drive and watch material
+      vkeys['d']=1;
+      if(p.xb>CUT_X1+0.6){ dphase='RAISE'; dTimer=0; }
+      break; }
+    case 'RAISE': {
+      setAuto(false); dTimer+=DT;
+      vkeys['w']=1;
+      if(dTimer>1.0){
+        if(coverage()>0.985){ dphase='PARK'; dTimer=0; }
+        else dphase='TO_START';
+      }
+      break; }
+    case 'PARK': {
+      dTimer+=DT;
+      if(lift>0.5) vkeys['w']=1;
+      if(dTimer>1.8){ demo=false; vkeys={}; $('btnDemo').classList.remove('on'); }
+      break; }
+  }
+}
+
+/* ================= drawing ================= */
+const W=document.getElementById('world'), ctx=W.getContext('2d');
+const SC=34, OX=0, OY=8.2*SC;
+const w2s=(x,y)=>[OX+x*SC, OY-y*SC];
+function line(a,b,w,col,dash){ctx.beginPath();ctx.setLineDash(dash||[]);ctx.moveTo(...a);ctx.lineTo(...b);
+  ctx.lineWidth=w;ctx.strokeStyle=col;ctx.lineCap='round';ctx.stroke();ctx.setLineDash([]);}
+function pinAt(p,r=4.5){ctx.beginPath();ctx.arc(p[0],p[1],r,0,7);ctx.fillStyle='#23272c';ctx.fill();
+  ctx.beginPath();ctx.arc(p[0],p[1],r*0.45,0,7);ctx.fillStyle='#5a6068';ctx.fill();}
+function wheel(x,y,r,inner){
+  const p=w2s(x,y);
+  ctx.beginPath();ctx.arc(p[0],p[1],r*SC,0,7);ctx.fillStyle='#23272c';ctx.fill();
+  ctx.beginPath();ctx.arc(p[0],p[1],r*SC*0.55,0,7);ctx.fillStyle=inner||'#c98314';ctx.fill();
+  ctx.beginPath();ctx.arc(p[0],p[1],r*SC*0.2,0,7);ctx.fillStyle='#23272c';ctx.fill();
+}
+function draw(){
+  ctx.clearRect(0,0,W.width,W.height);
+  ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=1;
+  for(let x=0;x<=32;x+=2){const [px]=w2s(x,0);ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,W.height);ctx.stroke();}
+  for(let y=-2;y<=8;y++){const [,py]=w2s(0,y);ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(W.width,py);ctx.stroke();}
+  // terrain
+  ctx.beginPath();
+  const p0=w2s(TX0,terrain[0]);ctx.moveTo(p0[0],p0[1]);
+  for(let i=1;i<TN;i++){const x=TX0+(TX1-TX0)*i/(TN-1);const p=w2s(x,terrain[i]);ctx.lineTo(p[0],p[1]);}
+  const pe=w2s(TX1,0);ctx.lineTo(pe[0],W.height);ctx.lineTo(p0[0],W.height);ctx.closePath();
+  ctx.fillStyle='#31363d';ctx.fill();
+  ctx.strokeStyle='#6b7078';ctx.lineWidth=2;ctx.stroke();
+  // grade + cut level lines
+  const ga=w2s(CUT_X0,gradeY), gb=w2s(CUT_X1,gradeY);
+  line(ga,gb,2,'#ff8a1e',[7,5]);
+  ctx.fillStyle='#ff8a1e';ctx.font='11px IBM Plex Mono';
+  ctx.fillText('GRADE '+gradeY.toFixed(2), gb[0]-90, gb[1]+16);
+  if(auto){
+    const ca=w2s(CUT_X0-0.5,cutLevel), cb=w2s(CUT_X1+0.5,cutLevel);
+    line(ca,cb,1.2,'#38d996',[3,5]);
+    ctx.fillStyle='#38d996';ctx.fillText('CUT '+cutLevel.toFixed(2), ca[0]+4, ca[1]-6);
+  }
+  drawMachine();
+  ctx.fillStyle='#c3ccd5';ctx.font='600 13px Chakra Petch';
+  ctx.fillText(demo?('DEMO OPERATOR — '+dphase+' (press any control to take over)')
+    :auto?'AUTOMATION ON — holding cutting edge on cut level · you drive (A/D)'
+    :'MANUAL — A/D drive · W/S blade · G automation', 14, 24);
+}
+function drawMachine(){
+  const p=machinePose();
+  // wheels ride the terrain
+  wheel(xr-TAN, terrAt(xr-TAN)+RR, RR);
+  wheel(xr+TAN, terrAt(xr+TAN)+RR, RR);
+  wheel(p.xf,   terrAt(p.xf)+RF,  RF);
+  // frame axle line points
+  const rA=w2s(xr,p.rearY), fA=w2s(p.xf,p.frontY);
+  // body drawn in frame coords rotated by pitch about the rear axle
+  ctx.save();
+  ctx.translate(rA[0],rA[1]);
+  ctx.rotate(-p.pitch);
+  const r=(x,y,w,h,rad,fill)=>{ctx.beginPath();
+    ctx.roundRect(x*SC,-(y*SC),w*SC,h*SC,rad);ctx.fillStyle=fill;ctx.fill();};
+  // rear power module over the tandems (dark) + orange engine housing
+  r(-1.45,2.15,2.9,1.35,6,'#23272c');
+  r(-1.3,2.0,2.6,0.95,5,'#f0a02a');
+  // exhaust + precleaner
+  r(0.15,2.75,0.14,0.6,2,'#23272c');
+  ctx.beginPath();ctx.arc(0.55*SC,-(2.85*SC),0.16*SC,0,7);ctx.fillStyle='#23272c';ctx.fill();
+  // cab
+  r(1.35,3.05,1.35,2.0,5,'#f0a02a');
+  r(1.5,2.9,1.05,1.6,4,'#23272c');
+  r(1.6,2.8,0.85,1.35,3,'#bfe3ef');
+  // gooseneck main frame: tall at cab, arcs down to the front axle
+  ctx.beginPath();
+  ctx.moveTo(1.4*SC,-(2.2*SC));
+  ctx.quadraticCurveTo(3.2*SC,-(2.3*SC),4.4*SC,-(1.55*SC));
+  ctx.lineTo(WB*SC,-(0.75*SC));
+  ctx.lineTo(WB*SC,-(0.45*SC));
+  ctx.lineTo(4.3*SC,-(1.15*SC));
+  ctx.quadraticCurveTo(3.0*SC,-(1.85*SC),1.4*SC,-(1.7*SC));
+  ctx.closePath();ctx.fillStyle='#f0a02a';ctx.fill();
+  ctx.strokeStyle='#c98314';ctx.lineWidth=2;ctx.stroke();
+  // ripper at the rear
+  ctx.beginPath();
+  ctx.moveTo(-1.5*SC,-(1.4*SC));ctx.lineTo(-2.3*SC,-(1.1*SC));ctx.lineTo(-2.3*SC,-(0.1*SC));
+  ctx.lineTo(-2.15*SC,-(0.1*SC));ctx.lineTo(-2.15*SC,-(0.9*SC));ctx.lineTo(-1.5*SC,-(1.15*SC));
+  ctx.closePath();ctx.fillStyle='#2b2f35';ctx.fill();
+  ctx.restore();
+  // ----- drawbar + circle + moldboard (world coords, anchored at true tip) -----
+  const nose=w2s(p.xf-0.15, p.frontY+0.35);                 // drawbar ball at the front nose
+  const tip=w2s(p.xb, p.tipY);
+  const circle=w2s(p.xb-0.15, p.tipY+0.55);
+  line(nose,circle,7,'#c98314'); line(nose,circle,4.5,'#f0a02a');   // drawbar
+  ctx.beginPath();ctx.arc(circle[0],circle[1],0.34*SC,0,7);          // circle
+  ctx.strokeStyle='#c98314';ctx.lineWidth=5;ctx.stroke();
+  // moldboard: curved blade to the cutting edge
+  const mTop=w2s(p.xb-0.55, p.tipY+0.95);
+  ctx.beginPath();
+  ctx.moveTo(mTop[0],mTop[1]);
+  ctx.quadraticCurveTo(tip[0]-0.55*SC, tip[1]-0.1*SC, tip[0],tip[1]);
+  ctx.lineTo(tip[0]-0.12*SC,tip[1]-0.06*SC);
+  ctx.quadraticCurveTo(mTop[0]-0.18*SC, mTop[1]+0.25*SC, mTop[0]-0.14*SC,mTop[1]+0.08*SC);
+  ctx.closePath();ctx.fillStyle='#2b2f35';ctx.fill();
+  ctx.strokeStyle='#171a1e';ctx.lineWidth=2;ctx.stroke();
+  // lift cylinders from the frame down to the drawbar/circle
+  const frameAtB=w2s(p.xb+0.25, p.rearY+(p.frontY-p.rearY)*((XB_OFS+0.25)/WB)+1.05);
+  const dbAtB=w2s(p.xb+0.15, p.tipY+0.62);
+  const mid=[frameAtB[0]+(dbAtB[0]-frameAtB[0])*0.5, frameAtB[1]+(dbAtB[1]-frameAtB[1])*0.5];
+  line(mid,dbAtB,4,'#e0e4e8');
+  line(frameAtB,mid,8,'#b23327'); line(frameAtB,mid,4.5,'#e5442f');
+  pinAt(frameAtB,4); pinAt(dbAtB,4); pinAt(nose,4.5); pinAt(tip,3.5);
+  // mast + laser receiver on the blade
+  const mastT=w2s(p.xb-0.55, p.tipY+2.5);
+  line(w2s(p.xb-0.55,p.tipY+0.95),mastT,3,'#8b9198');
+  ctx.fillStyle='#12161a';ctx.strokeStyle='#38d996';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(mastT[0]-14,mastT[1]-9,28,16,3);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#38d996';ctx.font='8px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText('LSR',mastT[0],mastT[1]+3);ctx.textAlign='left';
+  // IMU chips
+  imuChipAt(w2s(xr+1.6, p.rearY+1.55),'IMU-F');
+  imuChipAt(w2s(p.xf-1.6, p.frontY+0.75),'IMU-D');
+  // estimated ghost: frame pitch line + est cutting edge crosshair
+  const gr0=w2s(xr, kfE.x[0]+lift-BLADE_OFS - Math.tan(kfF.x[0])*XB_OFS + 0);   // back out rear height from est
+  const gr1=w2s(p.xf, kfE.x[0]+lift-BLADE_OFS + Math.tan(kfF.x[0])*(WB-XB_OFS));
+  ctx.globalAlpha=0.5; line(gr0,gr1,2,'#38d996',[4,4]); ctx.globalAlpha=1;
+  const pt=w2s(p.xb, kfE.x[0]);
+  ctx.strokeStyle='#38d996';ctx.lineWidth=1.6;
+  ctx.beginPath();ctx.arc(pt[0],pt[1],7,0,7);ctx.stroke();
+  line([pt[0]-11,pt[1]],[pt[0]+11,pt[1]],1.6,'#38d996');
+  line([pt[0],pt[1]-11],[pt[0],pt[1]+11],1.6,'#38d996');
+}
+function imuChipAt(p,txt){
+  ctx.fillStyle='#12161a';ctx.strokeStyle='#38d996';ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(p[0]-19,p[1]-8,38,15,3);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#38d996';ctx.font='8px IBM Plex Mono';ctx.textAlign='center';
+  ctx.fillText(txt,p[0],p[1]+3);ctx.textAlign='left';
+}
+
+/* ================= grade bar + strips + readouts ================= */
+const GB=document.getElementById('gbar'), gctx=GB.getContext('2d');
+function drawGradeBar(err){
+  gctx.clearRect(0,0,GB.width,GB.height);
+  const H=GB.height, mid=H/2, R=0.6;
+  gctx.fillStyle='#20272f'; gctx.fillRect(14,6,16,H-12);
+  const tol=0.03/R*(H/2-6);
+  gctx.fillStyle='rgba(56,217,150,.25)'; gctx.fillRect(14,mid-tol,16,tol*2);
+  gctx.strokeStyle='#ff8a1e';gctx.lineWidth=2;
+  gctx.beginPath();gctx.moveTo(8,mid);gctx.lineTo(36,mid);gctx.stroke();
+  const yy=mid-Math.max(-1,Math.min(1,err/R))*(H/2-6);
+  const c=Math.abs(err)<0.03?'#38d996':(Math.abs(err)<0.12?'#ffc53d':'#ff8a1e');
+  gctx.fillStyle=c;gctx.beginPath();
+  gctx.moveTo(34,yy);gctx.lineTo(42,yy-6);gctx.lineTo(42,yy+6);gctx.closePath();gctx.fill();
+  const el=document.getElementById('gbval');
+  el.textContent=(err>=0?'+':'')+err.toFixed(2); el.style.color=c;
+}
+const strips=[1,2,3].map(i=>document.getElementById('s'+i).getContext('2d'));
+function pushHist(){
+  const p=machinePose();
+  hist[0].push([p.pitch,kfF.x[0]]);
+  hist[1].push([p.dbPitch,kfD.x[0]]);
+  hist[2].push([p.tipY,kfE.x[0]]);
+  for(const h of hist) if(h.length>HMAX)h.shift();
+}
+function drawStrips(){
+  for(let i=0;i<3;i++){
+    const c=strips[i], h=hist[i], Wp=c.canvas.width, Hp=c.canvas.height;
+    c.clearRect(0,0,Wp,Hp);
+    if(h.length<2)continue;
+    let lo=1e9,hi=-1e9;for(const q of h){lo=Math.min(lo,q[0],q[1]);hi=Math.max(hi,q[0],q[1]);}
+    const sp=Math.max(hi-lo, i===2?0.1:0.03); lo-=0.08*sp; const rng=sp*1.16;
+    const Y=vv=>Hp-3-(vv-lo)/rng*(Hp-6), X=k=>k/(HMAX-1)*Wp;
+    c.lineWidth=1.2;
+    for(const [idx,col] of [[0,'rgba(232,237,242,0.35)'],[1,'#38d996']]){
+      c.strokeStyle=col;c.beginPath();
+      h.forEach((q,k)=>{k?c.lineTo(X(k),Y(q[idx])):c.moveTo(X(0),Y(q[idx]))});
+      c.stroke();
+    }
+  }
+}
+const $=id=>document.getElementById(id);
+const deg=r=>(r*180/Math.PI).toFixed(2)+'°';
+function readouts(){
+  const p=machinePose();
+  $('e1').textContent=deg(kfF.x[0]); $('t1').textContent=deg(p.pitch);
+  $('d1').textContent='Δ'+((kfF.x[0]-p.pitch)*180/Math.PI).toFixed(2)+'°';
+  $('b1').textContent=(kfF.x[1]*180/Math.PI).toFixed(2);
+  $('bt1').textContent='(true '+(biasF*180/Math.PI).toFixed(2)+')';
+  $('e2').textContent=deg(kfD.x[0]); $('t2').textContent=deg(p.dbPitch);
+  $('d2').textContent='Δ'+((kfD.x[0]-p.dbPitch)*180/Math.PI).toFixed(2)+'°';
+  $('b2').textContent=(kfD.x[1]*180/Math.PI).toFixed(2);
+  $('bt2').textContent='(true '+(biasD*180/Math.PI).toFixed(2)+')';
+  $('e3').textContent=kfE.x[0].toFixed(3)+' m'; $('t3').textContent=p.tipY.toFixed(3)+' m';
+  $('d3').textContent='Δ'+((kfE.x[0]-p.tipY)*100).toFixed(1)+'cm';
+  $('b3').textContent=(kfE.x[1]*100).toFixed(1);
+  $('bt3').textContent='(true '+(biasE*100).toFixed(1)+')';
+  $('tx').textContent=p.xb.toFixed(1); $('ty').textContent=kfE.x[0].toFixed(2);
+  $('fkerr').textContent=(Math.abs(kfE.x[0]-p.tipY)*100).toFixed(1);
+  $('cutlvl').textContent=auto?cutLevel.toFixed(2):'—';
+  $('pass').textContent=passN;
+  $('spd').textContent=v.toFixed(1);
+  const cov=coverage(); $('covLbl').textContent=(cov*100).toFixed(0)+'%';
+  $('progress').style.width=(cov*100)+'%';
+  $('gblbl').innerHTML=auto?'Depth to<br>cut level':'Depth<br>to grade';
+  drawGradeBar(kfE.x[0]-(auto?cutLevel:gradeY));
+  const st=$('status');
+  if(demo){st.textContent='DEMO · '+dphase+(auto?' · CUT '+cutLevel.toFixed(2)+' m':'');st.className='assist';}
+  else if(auto){st.textContent='AUTOMATION · CUT '+cutLevel.toFixed(2)+' m';st.className='assist';}
+  else{st.textContent='MANUAL CONTROL';st.className='';}
+}
+
+/* ================= loop ================= */
+let last=0, wasCutting=false;
+function frame(ts){
+  requestAnimationFrame(frame);
+  if(!last)last=ts; let el=Math.min((ts-last)/1000,0.05); last=ts;
+  let acc=el;
+  while(acc>0){
+    if(demo) demoStep();
+    imuStep(wasCutting);
+    wasCutting=plant(control());
+    histAcc+=DT; if(histAcc>=4*DT){histAcc=0;pushHist();}
+    acc-=DT;
+  }
+  draw(); drawStrips(); readouts();
+}
+requestAnimationFrame(frame);
+
+/* ================= input ================= */
+addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if('wasd'.includes(k)){if(demo)stopDemo();keys[k]=true;e.preventDefault();}
+  if(k==='g'){if(demo)stopDemo();toggleAuto();}
+});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+addEventListener('blur',()=>{keys={};});
+for(const b of document.querySelectorAll('.pad button')){
+  const k=b.dataset.k;
+  const on=e=>{e.preventDefault();if(demo)stopDemo();keys[k]=true;b.classList.add('active');};
+  const off=()=>{keys[k]=false;b.classList.remove('active');};
+  b.addEventListener('pointerdown',on);
+  b.addEventListener('pointerup',off); b.addEventListener('pointerleave',off); b.addEventListener('pointercancel',off);
+}
+function setAuto(on){
+  if(auto===on) return;
+  auto=on; passArm=false;
+  if(auto) cutLevel=Math.min(0.8, Math.max(gradeY, kfE.x[0]));
+  $('btnAssist').classList.toggle('on',auto);
+}
+function toggleAuto(){ setAuto(!auto); }
+$('btnAssist').onclick=()=>{if(demo)stopDemo();toggleAuto();};
+function startDemo(){ demo=true; dphase='TO_START'; vkeys={}; keys={};
+  $('btnDemo').classList.add('on'); }
+function stopDemo(){ demo=false; vkeys={}; $('btnDemo').classList.remove('on'); }
+$('btnDemo').onclick=()=>{ demo?stopDemo():startDemo(); };
+$('btnReset').onclick=()=>{
+  stopDemo(); dphase='TO_START';
+  xr=1.2; v=0; lift=0.6; liftDot=0; auto=false; passN=0; passArm=false; keys={};
+  $('btnAssist').classList.remove('on');
+  initTerrain(); initEst(); hist=[[],[],[]];
+};
+$('grade').oninput=e=>{gradeY=+e.target.value;$('gradeLbl').textContent=gradeY.toFixed(2)+' m';
+  cutLevel=Math.max(cutLevel,gradeY);};
+$('noise').oninput=e=>{noiseK=+e.target.value;$('noiseLbl').textContent=noiseK.toFixed(1)+'×';};
+initTerrain(); initEst(); startDemo();
+</script>
+</body>
+</html>
