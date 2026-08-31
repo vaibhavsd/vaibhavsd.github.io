@@ -1,0 +1,32 @@
+# General search engines (Google, Bing, etc.) are welcome — this site is
+# meant to be found. The blocks below opt out only of crawlers used to
+# collect training data for AI models. Compliance is voluntary on the
+# crawler's part, and this has no effect on anything already crawled
+# before this file existed.
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: Meta-ExternalAgent
+Disallow: /
+
+User-agent: *
+Allow: /
