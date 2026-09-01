@@ -25,9 +25,11 @@ Body pitch and push-arm pitch then go through the machine's forward kinematics �
 
 With the cutting edge located, automation is a closed loop on the blade lift cylinders: estimated elevation error against the operator-set cut level drives lift rate, holding the edge on grade while the operator only drives forward/reverse. The demo also carries a simple cut-and-fill model — the blade accumulates a load as it cuts high ground and meters it back out over low ground — so a full automated pass visibly flattens the terrain toward the target grade.
 
+The blade sits about 2.85 m ahead of the track centerline, so body pitch arrives at the cutting edge amplified roughly 1.6×, and the tracks pitch over every bump in the real ground the automation has to reject. Even against that amplified disturbance, the closed loop holds the edge to about 1 cm — the "watch demo" run in the embed below shows that disturbance rejection directly.
+
 ## 4. Demo
 
-Drive with **A/D**, toggle blade automation with **G** (or fly it manually with **W/S**), and adjust cut level, sensor noise and final grade live. Each estimator card shows the live estimate against the (otherwise hidden) ground truth, plus the bias term the filter is tracking.
+Click **Watch demo** for a scripted automated pass, or take over: **A/D** drives, **W/S** raises/lowers the blade manually, **G** toggles automation (once it's on, **W/S** instead moves the cut level), and the sliders adjust final grade and sensor noise live. Each telemetry card shows the live estimate against the (otherwise hidden) ground truth, plus the bias term the filter is tracking — watch it converge in the first few seconds.
 
 <iframe class="demo-frame" src="./dozer-imu-sim.html" title="Track-Type Tractor Automation interactive demo" loading="lazy"></iframe>
 <p class="demo-cap">Live demo — single self-contained HTML file, embedded directly, no build step.</p>

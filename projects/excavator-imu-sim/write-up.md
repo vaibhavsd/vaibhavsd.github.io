@@ -20,11 +20,11 @@ The three link-angle estimates feed the excavator's forward kinematics — known
 
 ## 4. Automation
 
-With the bucket tip located, automation closes the loop on **boom + bucket**: estimated tip elevation error against the operator-set cut level drives boom lift and bucket curl, holding the tip on grade while the operator drives the **stick** manually — a shared-control setup, not full autonomy, matching how real grade-assist excavator systems are typically operated.
+With the bucket tip located, automation closes the loop on **boom + bucket**: given the operator's stick rate, it solves a 2×2 system every control cycle for the boom and bucket rates that keep the tip on the cut level and hold the cutting angle, subject to actuator rate limits and lag — while the operator drives the **stick** manually. It's a shared-control setup, not full autonomy, matching how real grade-assist excavator systems are typically operated, and it never lets you cut below final grade.
 
 ## 5. Demo
 
-Drive boom/stick/bucket manually with **W/S**, **A/D**, **Q/E**, toggle automation with **G**, and adjust cut level and IMU noise live. Each link's card shows the live estimate against the (otherwise hidden) ground truth, plus roll/yaw readouts and the gyro bias term being tracked.
+Click **Watch demo** for a scripted automated pass, or take over: **W/S** drives the boom, **A/D** crowds the stick in/out, **Q/E** curl/dump the bucket, **G** toggles automation (once it's on, **W/S** instead moves the cut level), and the sliders adjust final grade and sensor noise live. Each link's card shows the live estimate against the (otherwise hidden) ground truth, plus roll/yaw readouts and the gyro bias term converging in the first few seconds. The depth gauge beside the machine reads green inside a ±5 cm band of the target.
 
 <iframe class="demo-frame" src="./excavator-imu-sim.html" title="Excavator Automation interactive demo" loading="lazy"></iframe>
 <p class="demo-cap">Live demo — single self-contained HTML file, embedded directly, no build step.</p>

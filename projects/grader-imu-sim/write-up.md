@@ -18,11 +18,13 @@ Each cycle: **predict** by integrating the bias-corrected rate — gyro rate for
 
 With cutting-edge elevation estimated, automation closes the loop on the **blade lift cylinders**: estimated elevation error against the operator-set cut level drives lift rate, holding the edge on grade while the operator drives forward/reverse and raises/lowers the target cut level. The demo also tracks blade speed and pass coverage as the grader works the strip toward final grade.
 
+The front wheel and rear tandem bogie ride the real ground, so the mainframe pitches and heaves over every bump, and because the blade hangs off that frame, the disturbance feeds straight into the cutting edge — a pass with the lift cylinders held fixed wanders by about 27 cm; automation holds it to roughly 2 cm. It also compounds pass over pass: the tandems ride the surface the blade just cut while the front wheel is still out on uncut ground, so each pass genuinely smooths into the next rather than just repeating it.
+
 The demo is a 2D side view showing elevation control only; on the real machine the same architecture also holds cross-slope via the blade's follower lift cylinder, which isn't modeled here.
 
 ## 4. Demo
 
-Drive with **A/D**, toggle blade automation with **G** (or fly it manually with **W/S**), and adjust cut level, sensor noise and final grade live. Each estimator card shows the live estimate against the (otherwise hidden) ground truth, plus the bias term the filter is tracking.
+Click **Watch demo** for a scripted automated pass, or take over: **A/D** drives, **W/S** raises/lowers the blade manually, **G** toggles automation (once it's on, **W/S** instead moves the cut level), and the sliders adjust final grade and sensor noise live. Each telemetry card shows the live estimate against the (otherwise hidden) ground truth, plus the bias term the filter is tracking — watch it converge in the first few seconds.
 
 <iframe class="demo-frame" src="./grader-imu-sim.html" title="Motor Grader Automation interactive demo" loading="lazy"></iframe>
 <p class="demo-cap">Live demo — single self-contained HTML file, embedded directly, no build step.</p>
