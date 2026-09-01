@@ -8,156 +8,195 @@
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#14181d; --panel:#1b2129; --panel2:#20272f; --line:#2b333d;
+  --bg:#14181d; --surface:#1b2129; --inset:#20272f; --line:#2b333d;
   --ink:#e8edf2; --dim:#8b98a5; --faint:#5a6673;
-  --orange:#ff8a1e; --green:#38d996; --amber:#ffc53d; --red:#ff5252;
+  --orange:#ff8a1e; --green:#38d996; --amber:#ffc53d;
   --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
   --disp:'Chakra Petch',system-ui,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--disp);padding:14px 16px 28px}
-.wrap{max-width:1180px;margin:0 auto}
-header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
-h1{font-size:17px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
-h1 span{color:var(--orange)}
-#status{font-family:var(--mono);font-size:12px;padding:4px 10px;border:1px solid var(--line);border-radius:3px;color:var(--dim);letter-spacing:.05em}
-#status.assist{color:var(--green);border-color:#265a45}
-.hbtns{margin-left:auto;display:flex;gap:8px}
-button{font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
-  background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:7px 16px;cursor:pointer;user-select:none;-webkit-user-select:none}
+body{background:var(--bg);color:var(--ink);font-family:var(--disp);padding:20px 16px 48px}
+.wrap{max-width:1000px;margin:0 auto}
+kbd{display:inline-block;min-width:18px;text-align:center;padding:1px 5px;
+  background:#2e3742;border:1px solid #4a5560;border-bottom-width:2px;border-radius:4px;
+  color:#fff;font-family:var(--mono);font-size:10.5px;font-weight:600;line-height:1.5}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+h1{font-size:21px;font-weight:700;letter-spacing:.01em}
+.sub{color:var(--dim);font-size:13px;margin-top:2px}
+#status{font-family:var(--mono);font-size:12px;padding:5px 12px;border:1px solid var(--line);
+  border-radius:999px;color:var(--dim);white-space:nowrap}
+#status.assist{color:var(--green);border-color:#2c6a50}
+
+.stage{margin:0}
+.stage canvas{display:block;width:100%;height:auto;background:var(--surface);
+  border:1px solid var(--line);border-radius:10px}
+figcaption{color:var(--faint);font-size:11.5px;margin-top:6px}
+figcaption i{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin:0 4px 0 10px}
+figcaption i:first-child{margin-left:0}
+
+.deck{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding:14px 0 4px}
+.modes{display:flex;gap:8px;flex-wrap:wrap}
+button{font-family:var(--disp);font-weight:600;font-size:12.5px;
+  background:var(--inset);color:var(--ink);border:1px solid var(--line);border-radius:7px;
+  padding:9px 15px;cursor:pointer;user-select:none;-webkit-user-select:none}
 button:hover{border-color:var(--dim)}
+button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 button.primary{background:var(--orange);border-color:var(--orange);color:#181008}
 button.on{background:var(--green);border-color:var(--green);color:#08201a}
-button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
-.stage{display:flex;gap:10px}
-.canvasbox{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-canvas#world{display:block;width:100%;height:auto}
-.gradebar{width:64px;background:var(--panel);border:1px solid var(--line);border-radius:6px;
-  display:flex;flex-direction:column;align-items:center;padding:8px 0 6px;gap:6px}
-.gradebar .lbl{font-size:9px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;text-align:center;line-height:1.3}
-#gbval{font-family:var(--mono);font-size:11px;color:var(--green)}
-.grid{display:grid;grid-template-columns:repeat(3,1fr) 320px;gap:10px;margin-top:10px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
-.card h2{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;display:flex;justify-content:space-between}
-.card h2 .tag{color:var(--orange)}
-.angles{font-family:var(--mono);font-size:12px;line-height:1.65}
-.angles .est{color:var(--green);font-weight:600;font-size:16px}
-.angles .tru{color:var(--faint)}
-.angles .err{color:var(--dim)}
-.axrow{font-family:var(--mono);font-size:10.5px;color:var(--dim);line-height:1.6}
-.axrow b{color:var(--ink);font-weight:500}
-.axrow .bias{color:var(--amber)}
-canvas.strip{width:100%;height:48px;display:block;margin-top:6px;background:var(--panel2);border-radius:3px}
-.kv{font-family:var(--mono);font-size:12px;line-height:1.85}
-.kv b{color:var(--green);font-weight:600}
-.kv .o{color:var(--orange)}
-.slider{margin-top:8px}
-.slider label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;font-family:var(--mono)}
-.slider input{width:100%;accent-color:var(--orange)}
-.progresswrap{height:8px;background:var(--panel2);border-radius:4px;margin-top:4px;overflow:hidden}
-#progress{height:100%;width:0%;background:var(--green);transition:width .2s}
-.loadwrap{height:8px;background:var(--panel2);border-radius:4px;margin-top:4px;overflow:hidden}
-#loadbar{height:100%;width:0%;background:var(--amber);transition:width .2s}
-.pad{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
-.pad button{padding:10px 4px;font-size:11px;color:#dfe6ec;touch-action:none;display:flex;align-items:center;justify-content:center;gap:5px}
-.pad button kbd{margin:0}
+.pad{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:1;min-width:300px;max-width:420px}
+.pad button{display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 2px;font-size:10.5px;color:#c8d1d9;line-height:1.1}
 .pad button.active{background:var(--orange);border-color:var(--orange);color:#181008}
-.keys{font-family:var(--mono);font-size:11.5px;color:#aeb9c4;margin-top:10px;line-height:2.1}
-.keys b{color:var(--ink)}
-kbd{display:inline-block;min-width:20px;text-align:center;padding:2px 6px;margin:0 1px;
-  background:#2e3742;border:1px solid #4a5560;border-bottom-width:2px;border-radius:4px;
-  color:#fff;font-family:var(--mono);font-size:11px;font-weight:600}
-.legend{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap}
-.legend i{display:inline-block;width:10px;height:3px;margin-right:5px;vertical-align:middle;border-radius:1px}
-@media (max-width:980px){.grid{grid-template-columns:1fr 1fr}.stage{flex-direction:column}
- .gradebar{flex-direction:row;width:100%;height:58px;padding:0 10px}}
-@media (max-width:640px){.grid{grid-template-columns:1fr}}
+.hint{color:var(--dim);font-size:12.5px;line-height:1.75;padding:8px 0 14px;max-width:72ch}
+.hint b{color:var(--ink);font-weight:600}
+
+.telemetry{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--line);padding-top:16px;gap:0}
+.joint{padding:0 18px}
+.joint:first-child{padding-left:0}
+.joint+.joint{border-left:1px solid var(--line)}
+.jhead{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600}
+.jhead .tag{font-family:var(--mono);font-size:10px;color:var(--orange);font-weight:400}
+.jnum{font-family:var(--mono);font-size:27px;font-weight:600;color:var(--green);margin:4px 0 1px}
+.jsub{font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.7}
+.jsub .amber{color:var(--amber)}
+canvas.strip{width:100%;height:44px;display:block;margin:8px 0 2px;background:var(--inset);border-radius:5px}
+
+.statusline{display:flex;gap:26px;flex-wrap:wrap;align-items:center;
+  border-top:1px solid var(--line);margin-top:16px;padding:13px 0}
+.metric{display:flex;align-items:baseline;gap:8px}
+.mlabel{font-size:11.5px;color:var(--faint)}
+.mval{font-family:var(--mono);font-size:13px;color:var(--ink)}
+.mval.o,.mval .o{color:var(--orange)}
+.progresswrap{width:110px;height:7px;background:var(--inset);border-radius:4px;overflow:hidden;align-self:center}
+#progress{height:100%;width:0%;background:var(--green);transition:width .2s}
+.loadwrap{width:110px;height:7px;background:var(--inset);border-radius:4px;overflow:hidden;align-self:center}
+#loadbar{height:100%;width:0%;background:var(--amber);transition:width .2s}
+@media (prefers-reduced-motion:reduce){#progress,#loadbar{transition:none}}
+
+.settings{display:flex;gap:34px;flex-wrap:wrap;border-top:1px solid var(--line);padding:14px 0 4px}
+.slider{flex:1;min-width:220px;max-width:330px}
+.slider label{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:4px}
+.slider label span{font-family:var(--mono);color:var(--ink)}
+.slider input{width:100%;accent-color:var(--orange)}
+
+.explain{border-top:1px solid var(--line);margin-top:14px;padding-top:13px;color:var(--dim);
+  font-size:12.5px;line-height:1.8;max-width:76ch}
+.explain summary{cursor:pointer;color:var(--ink);font-weight:600;font-size:13px}
+.explain summary:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.explain p{margin-top:10px}
+.explain b{color:var(--ink);font-weight:600}
+
+@media (max-width:760px){
+  .telemetry{grid-template-columns:1fr}
+  .joint{padding:0 0 14px}
+  .joint+.joint{border-left:none;border-top:1px solid var(--line);padding-top:14px}
+  .pad{min-width:100%;grid-template-columns:repeat(2,1fr)}
+  .pad button{padding:11px 2px}
+}
+
 </style>
 </head>
 <body>
 <div class="wrap">
 <header>
-  <h1>Track-Type Tractor Automation <span>//</span> IMU State Estimation</h1>
-  <div id="status">MANUAL CONTROL</div>
-  <div class="hbtns">
-    <button id="btnDemo">Demo</button>
-    <button id="btnAssist" class="primary">Automation [G]</button>
-    <button id="btnReset">Reset</button>
+  <div>
+    <h1>Track-type tractor automation</h1>
+    <p class="sub">Grade control from IMU state estimation</p>
   </div>
+  <div id="status" role="status">Manual control</div>
 </header>
 
-<div class="stage">
-  <div class="canvasbox"><canvas id="world" width="1100" height="400"></canvas></div>
-  <div class="gradebar">
-    <div class="lbl" id="gblbl">Depth<br>to grade</div>
-    <canvas id="gbar" width="44" height="250"></canvas>
-    <div id="gbval">+0.00</div>
-  </div>
-</div>
+<figure class="stage">
+  <canvas id="world" width="1100" height="400"></canvas>
+  <figcaption>
+    <i style="background:var(--green)"></i>estimate
+    <i style="background:#e8edf2;opacity:.5"></i>true machine
+    <i style="background:var(--orange)"></i>final grade
+  </figcaption>
+</figure>
 
-<div class="grid">
-  <div class="card">
-    <h2>Body pitch <span class="tag">IMU-B</span></h2>
-    <div class="angles">
-      <div class="est" id="e1">--.-°</div>
-      <div class="tru">true <span id="t1">--.-°</span> <span class="err" id="d1"></span></div>
-    </div>
-    <div class="axrow">b̂<sub>g</sub> <span class="bias" id="b1">--</span>°/s <span id="bt1" style="color:var(--faint)"></span></div>
-    <canvas class="strip" id="s1" width="300" height="48"></canvas>
+<section class="deck">
+  <div class="modes">
+    <button id="btnDemo">Watch demo</button>
+    <button id="btnAssist" class="primary">Automation <kbd>G</kbd></button>
+    <button id="btnReset">Reset</button>
   </div>
-  <div class="card">
-    <h2>Push arm pitch <span class="tag">IMU-P</span></h2>
-    <div class="angles">
-      <div class="est" id="e2">--.-°</div>
-      <div class="tru">true <span id="t2">--.-°</span> <span class="err" id="d2"></span></div>
-    </div>
-    <div class="axrow">b̂<sub>g</sub> <span class="bias" id="b2">--</span>°/s <span id="bt2" style="color:var(--faint)"></span></div>
-    <canvas class="strip" id="s2" width="300" height="48"></canvas>
+  <div class="pad">
+    <button data-k="a"><kbd>A</kbd><span>Reverse</span></button>
+    <button data-k="d"><kbd>D</kbd><span>Drive</span></button>
+    <button data-k="w"><kbd>W</kbd><span>Blade up</span></button>
+    <button data-k="s"><kbd>S</kbd><span>Blade down</span></button>
   </div>
-  <div class="card">
-    <h2>Cutting edge elev <span class="tag">GNS+IMU</span></h2>
-    <div class="angles">
-      <div class="est" id="e3">--.-- m</div>
-      <div class="tru">true <span id="t3">--.-- m</span> <span class="err" id="d3"></span></div>
-    </div>
-    <div class="axrow">b̂<sub>vz</sub> <span class="bias" id="b3">--</span> cm/s <span id="bt3" style="color:var(--faint)"></span></div>
-    <canvas class="strip" id="s3" width="300" height="48"></canvas>
-  </div>
-  <div class="card">
-    <h2>Machine — grade automation</h2>
-    <div class="kv">
-      blade X <b id="tx">--</b>&nbsp; elev <b id="ty">--</b> m &nbsp;·&nbsp; est err <span class="o" id="fkerr">--</span> cm<br>
-      cut level <b id="cutlvl">--</b> m &nbsp;·&nbsp; pass <span class="o" id="pass">0</span> &nbsp;·&nbsp; speed <b id="spd">0.0</b> m/s
-    </div>
-    <div class="slider"><label>Blade load <span id="loadLbl">0.0 m³/m</span></label>
-      <div class="loadwrap"><div id="loadbar"></div></div></div>
-    <div class="pad">
-      <button data-k="w"><kbd>W</kbd> Blade ▲</button><button data-k="d"><kbd>D</kbd> Drive ▶</button>
-      <button data-k="s"><kbd>S</kbd> Blade ▼</button><button data-k="a"><kbd>A</kbd> Reverse ◀</button>
-    </div>
-    <div class="keys">
-      <kbd>A</kbd><kbd>D</kbd> drive &nbsp; <kbd>W</kbd><kbd>S</kbd> blade lift &nbsp; <kbd>G</kbd> automation<br>
-      Automation on: it controls the <b>blade lift cylinders</b> to hold the cutting edge on the cut level —
-      you drive with <kbd>A</kbd><kbd>D</kbd>, and <kbd>W</kbd><kbd>S</kbd> raise/lower the cut level.
-      The blade <b>carries</b> what it cuts and meters it into the lows (cut &amp; fill); lift the blade while
-      driving forward to dump the rest.
-    </div>
-    <div class="slider"><label>Final grade <span id="gradeLbl">0.00 m</span></label>
-      <input type="range" id="grade" min="-0.2" max="0.15" step="0.05" value="0"></div>
-    <div class="slider"><label>Sensor noise <span id="noiseLbl">1.0×</span></label>
-      <input type="range" id="noise" min="0" max="3" step="0.1" value="1"></div>
-    <div class="slider"><label>Grade coverage <span id="covLbl">0%</span></label>
-      <div class="progresswrap"><div id="progress"></div></div></div>
-    <div class="legend">
-      <span><i style="background:var(--green)"></i>estimate</span>
-      <span><i style="background:#e8edf2;opacity:.5"></i>true</span>
-      <span><i style="background:var(--orange)"></i>final grade</span>
-      <span><i style="background:var(--amber)"></i>blade load</span>
-    </div>
-  </div>
-</div>
-</div>
+</section>
 
+<p class="hint">With automation on, the controller runs the <b>blade lift cylinders</b> to hold the
+cutting edge on the cut level while the tracks pitch over the ground. Driving stays yours:
+<kbd>A</kbd><kbd>D</kbd> to make the pass, <kbd>W</kbd><kbd>S</kbd> to move the cut level itself.
+The blade carries what it cuts and meters it into the lows; back up or lift clear and the pile
+stays on the ground where you stopped pushing.</p>
+
+<section class="telemetry">
+  <div class="joint">
+    <div class="jhead"><span>Body pitch</span><span class="tag">IMU-B</span></div>
+    <div class="jnum" id="e1">--</div>
+    <div class="jsub">true <span id="t1">--</span> &nbsp;<span id="d1"></span></div>
+    <div class="jsub">bias <span class="amber" id="b1">--</span>°/s <span id="bt1"></span></div>
+    <canvas class="strip" id="s1" width="320" height="44"></canvas>
+  </div>
+  <div class="joint">
+    <div class="jhead"><span>Push arm pitch</span><span class="tag">IMU-P</span></div>
+    <div class="jnum" id="e2">--</div>
+    <div class="jsub">true <span id="t2">--</span> &nbsp;<span id="d2"></span></div>
+    <div class="jsub">bias <span class="amber" id="b2">--</span>°/s <span id="bt2"></span></div>
+    <canvas class="strip" id="s2" width="320" height="44"></canvas>
+  </div>
+  <div class="joint">
+    <div class="jhead"><span>Cutting edge</span><span class="tag">GNSS + IMU</span></div>
+    <div class="jnum" id="e3">--</div>
+    <div class="jsub">true <span id="t3">--</span> &nbsp;<span id="d3"></span></div>
+    <div class="jsub">bias <span class="amber" id="b3">--</span> cm/s <span id="bt3"></span></div>
+    <canvas class="strip" id="s3" width="320" height="44"></canvas>
+  </div>
+</section>
+
+<section class="statusline">
+  <div class="metric"><span class="mlabel">Coverage</span>
+    <div class="progresswrap"><div id="progress"></div></div>
+    <span class="mval" id="covLbl">0%</span></div>
+  <div class="metric"><span class="mlabel">Pass</span><span class="mval o" id="pass">0</span></div>
+  <div class="metric"><span class="mlabel">Edge estimate error</span>
+    <span class="mval"><span id="fkerr">--</span> cm</span></div>
+  <div class="metric"><span class="mlabel">Blade</span>
+    <span class="mval">x <span id="tx">--</span>, <span id="ty">--</span> m</span></div>
+  <div class="metric"><span class="mlabel">Cut level</span><span class="mval" id="cutlvl">—</span></div>
+  <div class="metric"><span class="mlabel">Speed</span>
+    <span class="mval"><span id="spd">0.0</span> m/s</span></div>
+  <div class="metric"><span class="mlabel">Blade load</span>
+    <div class="loadwrap"><div id="loadbar"></div></div>
+    <span class="mval" id="loadLbl">0.00 m³/m</span></div>
+</section>
+
+<section class="settings">
+  <div class="slider"><label for="grade">Final grade <span id="gradeLbl">−0.20 m</span></label>
+    <input type="range" id="grade" min="-0.2" max="0.15" step="0.05" value="-0.2"></div>
+  <div class="slider"><label for="noise">Sensor noise <span id="noiseLbl">1.0×</span></label>
+    <input type="range" id="noise" min="0" max="3" step="0.1" value="1"></div>
+</section>
+
+<details class="explain">
+  <summary>How the automation works</summary>
+  <p>The blade sits about 2.85 m ahead of the track centre, so body pitch arrives at the cutting
+  edge amplified roughly 1.6×. The tracks ride the real ground and pitch over every bump; the
+  automation fights that amplified disturbance and holds the edge to about 1 cm.</p>
+  <p>Three two-state Kalman filters estimate body pitch, push-arm pitch and cutting-edge elevation,
+  each also solving for its sensor's unknown <b>bias</b> — watch the bias readouts converge to the
+  true values in the first seconds. The controller sees only these estimates. Unlike a grader, this
+  blade <b>carries</b> what it cuts and meters it into the lows, so the machine is cutting and
+  filling at the same time.</p>
+</details>
+</div>
 <script>
 'use strict';
 /* ================= machine constants ================= */
@@ -177,7 +216,7 @@ const DT=1/120;
 let xr=1.2, v=0;
 let lift=0.6, liftDot=0;
 let carried=0;                 // blade load m^2
-let auto=false, cutLevel=0.3, gradeY=0.0, noiseK=1.0, passN=0, passArm=false;
+let auto=false, cutLevel=0.3, gradeY=-0.2, noiseK=1.0, passN=0, passArm=false;
 let terrain=[], TX0=0, TX1=32, TN=321;
 let keys={}, demo=false, dphase='TO_START', vkeys={}, dTimer=0, dBench=null;
 let hist=[[],[],[]]; const HMAX=12/DT/4; let histAcc=0;
@@ -353,8 +392,8 @@ function demoStep(){
       if(xr>XR_MIN+0.4) vkeys['a']=1;
       else if(Math.abs(v)<0.05){
         // plan the next bench: monotone descent — refilled lows must not push it back up
-        dBench=(dBench===null)? Math.max(gradeY, maxTerr()-0.12)
-             : Math.max(gradeY, Math.min(dBench, maxTerr())-0.12);
+        dBench=(dBench===null)? Math.max(gradeY, maxTerr()-0.25)
+             : Math.max(gradeY, Math.min(dBench, maxTerr())-0.25);
         dphase='ENGAGE';
       }
       break; }
@@ -419,10 +458,11 @@ function draw(){
     ctx.fillStyle='#38d996';ctx.fillText('CUT '+cutLevel.toFixed(2), ca[0]+4, ca[1]-6);
   }
   drawMachine();
+  drawGauge();
   ctx.fillStyle='#c3ccd5';ctx.font='600 13px Chakra Petch';
-  ctx.fillText(demo?('DEMO OPERATOR — '+dphase+' (press any control to take over)')
-    :auto?'AUTOMATION ON — holding cutting edge on cut level · you drive (A/D)'
-    :'MANUAL — A/D drive · W/S blade · G automation', 14, 24);
+  ctx.fillText(demo?('Demo operator: '+dphase.toLowerCase().replace('_',' ')+' (press any control to take over)')
+    :auto?'Automation on: holding the cutting edge, you drive'
+    :'Manual: A/D drive, W/S blade, G automation', 14, 24);
 }
 function drawMachine(){
   const p=machinePose();
@@ -516,22 +556,28 @@ function imuChipAt(p,txt){
   ctx.fillText(txt,p[0],p[1]+3);ctx.textAlign='left';
 }
 
-/* ================= grade bar + strips + readouts ================= */
-const GB=document.getElementById('gbar'), gctx=GB.getContext('2d');
-function drawGradeBar(err){
-  gctx.clearRect(0,0,GB.width,GB.height);
-  const H=GB.height, mid=H/2, R=0.6;
-  gctx.fillStyle='#20272f'; gctx.fillRect(14,6,16,H-12);
-  const tol=0.03/R*(H/2-6);
-  gctx.fillStyle='rgba(56,217,150,.25)'; gctx.fillRect(14,mid-tol,16,tol*2);
-  gctx.strokeStyle='#ff8a1e';gctx.lineWidth=2;
-  gctx.beginPath();gctx.moveTo(8,mid);gctx.lineTo(36,mid);gctx.stroke();
-  const yy=mid-Math.max(-1,Math.min(1,err/R))*(H/2-6);
+/* ================= on-canvas depth gauge + strips + readouts ================= */
+function drawGauge(){
+  const ref=auto?cutLevel:gradeY;
+  const err=kfE.x[0]-ref;
+  const gx=W.width-46, gy0=58, gh=W.height-150, mid=gy0+gh/2, R=0.6;
+  ctx.fillStyle='rgba(18,22,26,0.88)';
+  ctx.beginPath();ctx.roundRect(gx-27,gy0-38,58,gh+84,10);ctx.fill();
+  ctx.strokeStyle='#2b333d';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#20272f';ctx.fillRect(gx-8,gy0,16,gh);
+  const tol=0.03/R*(gh/2);
+  ctx.fillStyle='rgba(56,217,150,.25)';ctx.fillRect(gx-8,mid-tol,16,tol*2);
+  ctx.strokeStyle='#ff8a1e';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(gx-14,mid);ctx.lineTo(gx+14,mid);ctx.stroke();
+  const yy=mid-Math.max(-1,Math.min(1,err/R))*(gh/2);
   const c=Math.abs(err)<0.03?'#38d996':(Math.abs(err)<0.12?'#ffc53d':'#ff8a1e');
-  gctx.fillStyle=c;gctx.beginPath();
-  gctx.moveTo(34,yy);gctx.lineTo(42,yy-6);gctx.lineTo(42,yy+6);gctx.closePath();gctx.fill();
-  const el=document.getElementById('gbval');
-  el.textContent=(err>=0?'+':'')+err.toFixed(2); el.style.color=c;
+  ctx.fillStyle=c;ctx.beginPath();
+  ctx.moveTo(gx+11,yy);ctx.lineTo(gx+19,yy-6);ctx.lineTo(gx+19,yy+6);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#8b98a5';ctx.font='600 10px Chakra Petch';ctx.textAlign='center';
+  ctx.fillText(auto?'to cut':'to grade',gx,gy0-20);
+  ctx.fillStyle=c;ctx.font='600 12px IBM Plex Mono';
+  ctx.fillText((err>=0?'+':'')+err.toFixed(2),gx,gy0+gh+26);
+  ctx.textAlign='left';
 }
 const strips=[1,2,3].map(i=>document.getElementById('s'+i).getContext('2d'));
 function pushHist(){
@@ -582,12 +628,10 @@ function readouts(){
   $('loadbar').style.width=Math.min(100,carried/CAP*100)+'%';
   const cov=coverage(); $('covLbl').textContent=(cov*100).toFixed(0)+'%';
   $('progress').style.width=(cov*100)+'%';
-  $('gblbl').innerHTML=auto?'Depth to<br>cut level':'Depth<br>to grade';
-  drawGradeBar(kfE.x[0]-(auto?cutLevel:gradeY));
   const st=$('status');
-  if(demo){st.textContent='DEMO · '+dphase+(auto?' · CUT '+cutLevel.toFixed(2)+' m':'');st.className='assist';}
-  else if(auto){st.textContent='AUTOMATION · CUT '+cutLevel.toFixed(2)+' m';st.className='assist';}
-  else{st.textContent='MANUAL CONTROL';st.className='';}
+  if(demo){st.textContent='Demo: '+dphase.toLowerCase().replace('_',' ')+(auto?', cut '+cutLevel.toFixed(2)+' m':'');st.className='assist';}
+  else if(auto){st.textContent='Automation: cut '+cutLevel.toFixed(2)+' m';st.className='assist';}
+  else{st.textContent='Manual control';st.className='';}
 }
 
 /* ================= loop ================= */
