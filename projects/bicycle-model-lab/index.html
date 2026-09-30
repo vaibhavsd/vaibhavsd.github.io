@@ -1,0 +1,644 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Bicycle Model Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --panel2:#f6f8fa; --ink:#141a22; --muted:#5a6573; --rule:#d8dee7; --rule2:#e9edf2;
+  --kin:#2563c4; --lin:#d56d12; --nl:#13905a; --bad:#c0352b;
+  --plot:#ffffff; --grid:#edf0f4; --axis:#b4bdc9; --tick:#6b7684; --ref:#98a2af; --ink2:#8c96a3;
+  --btn:#141a22; --btn-ink:#ffffff; --slider:#3a4656;
+  --shadow:0 1px 2px rgba(20,26,34,.05),0 4px 14px rgba(20,26,34,.04);
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0d1015; --panel:#151a21; --panel2:#1a2029; --ink:#e4e8ee; --muted:#97a1ae; --rule:#2a313c; --rule2:#212833;
+    --kin:#5f9ef2; --lin:#f2964c; --nl:#3fc488; --bad:#ff6d60;
+    --plot:#11151b; --grid:#1d232c; --axis:#3a4350; --tick:#8b95a3; --ref:#6f7a88; --ink2:#7d8896;
+    --btn:#e4e8ee; --btn-ink:#0d1015; --slider:#aab4c1;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0d1015; --panel:#151a21; --panel2:#1a2029; --ink:#e4e8ee; --muted:#97a1ae; --rule:#2a313c; --rule2:#212833;
+  --kin:#5f9ef2; --lin:#f2964c; --nl:#3fc488; --bad:#ff6d60;
+  --plot:#11151b; --grid:#1d232c; --axis:#3a4350; --tick:#8b95a3; --ref:#6f7a88; --ink2:#7d8896;
+  --btn:#e4e8ee; --btn-ink:#0d1015; --slider:#aab4c1;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);margin:0}
+.wrap{max-width:1360px;margin:0 auto;padding-inline:20px;padding-block:22px 56px;display:flex;flex-direction:column;gap:18px}
+@media (max-width:520px){.wrap{padding-inline:16px}}
+
+/* header */
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:14px 28px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
+.eyebrow{font:600 12px/1 var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1{font:700 40px/1 var(--display);letter-spacing:.01em;margin:6px 0 8px;text-wrap:balance}
+.lede{margin:0;max-width:68ch;color:var(--muted)}
+.lede i{font-family:var(--mono);font-style:normal;font-size:12.5px;color:var(--ink)}
+.models{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:7px 12px 7px 9px;border:1px solid var(--rule);border-radius:999px;background:var(--panel);cursor:pointer;font-weight:500;user-select:none}
+.chip:has(input:not(:checked)){opacity:.5}
+.chip input{margin:0;width:15px;height:15px;cursor:pointer}
+.chip .line{width:18px;height:3px;border-radius:2px;background:var(--c)}
+.chip input{accent-color:var(--c)}
+
+/* main grid */
+.main{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.main{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow)}
+.side{display:flex;flex-direction:column;gap:0;overflow:hidden}
+.side section{padding:14px 16px 16px;border-top:1px solid var(--rule2)}
+.side section:first-child{border-top:0}
+.side h2,.sec-title{font:600 13px/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.ctl{display:flex;flex-direction:column;gap:3px;margin-top:10px}
+.ctl:first-of-type{margin-top:0}
+.ctl .row{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.ctl output{font:500 12.5px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+.ctl input[type=range]{width:100%;margin:0;accent-color:var(--slider);height:18px}
+select{font:inherit;font-size:13px;width:100%;padding:6px 8px;border:1px solid var(--rule);border-radius:6px;background:var(--panel2);color:var(--ink)}
+.spec{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:12.5px;margin:0}
+.spec dt{color:var(--muted)}
+.spec dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.spec .hl{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:7px 10px;margin-bottom:4px;border-radius:6px;background:var(--panel2);border:1px solid var(--rule2)}
+.spec .hl b{font:600 20px/1 var(--mono)}
+.spec .hl span{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font:600 11px/1.5 var(--body);letter-spacing:.04em;text-transform:uppercase;border:1px solid currentColor}
+.bad{color:var(--bad)}
+
+/* stage */
+.stage{display:flex;flex-direction:column;overflow:hidden}
+.viewport{position:relative}
+#world{width:100%;height:clamp(340px,58vh,600px);display:block;background:var(--plot)}
+.hud{position:absolute;top:10px;left:10px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
+.hud span{font:500 12px var(--mono);font-variant-numeric:tabular-nums;padding:4px 8px;border-radius:6px;background:var(--panel);border:1px solid var(--rule);color:var(--ink)}
+.hud span em{font-style:normal;color:var(--muted);margin-right:4px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--rule2);background:var(--panel2)}
+button{font:500 13px var(--body);padding:7px 14px;border-radius:6px;border:1px solid var(--rule);background:var(--panel);color:var(--ink);cursor:pointer}
+button.primary{background:var(--btn);color:var(--btn-ink);border-color:var(--btn);min-width:78px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--kin);outline-offset:2px}
+.bar input[type=range]{flex:1;min-width:140px;accent-color:var(--slider)}
+.bar label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.bar select{width:auto;padding:4px 6px}
+.scroll{overflow-x:auto;border-top:1px solid var(--rule2)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{font:600 11.5px var(--body);color:var(--muted);text-align:right;padding:9px 12px;white-space:nowrap;border-bottom:1px solid var(--rule2)}
+td{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;padding:8px 12px;border-bottom:1px solid var(--rule2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+th:first-child,td:first-child{text-align:left;font-family:var(--body);font-weight:500}
+.sw{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:8px}
+.note{font-size:12.5px;color:var(--muted);margin:0;padding:10px 14px 12px;border-top:1px solid var(--rule2)}
+
+/* plots */
+.plots{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+figure.panel{margin:0;padding:12px 12px 10px;display:flex;flex-direction:column;gap:8px}
+figure h3{font:600 17px/1.1 var(--display);letter-spacing:.02em;margin:0}
+figcaption{font-size:12px;color:var(--muted);line-height:1.4}
+.plots canvas{width:100%;height:210px;display:block;border-radius:6px}
+
+/* notes */
+.lower{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:18px;align-items:start}
+@media (max-width:980px){.lower{grid-template-columns:1fr}}
+.lower .panel{padding:18px 20px}
+.lower h2{font:700 24px/1.1 var(--display);margin:0 0 12px}
+.tries{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.tries li{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px}
+.tries .tag{font:600 11px/1.6 var(--mono);color:var(--muted);border:1px solid var(--rule);border-radius:4px;padding:0 6px;height:fit-content;white-space:nowrap}
+.eqs h4{font:600 13px/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:16px 0 4px}
+.eqs h4:first-of-type{margin-top:0}
+.eq{overflow-x:auto;padding:4px 0;font-size:15px}
+.eqs p{font-size:12.5px;color:var(--muted);margin:14px 0 0;max-width:72ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">Lateral &amp; yaw dynamics · constant speed</div>
+    <h1>Bicycle Model Lab</h1>
+    <p class="lede">Three cars get the same steering input at the same speed. The kinematic model assumes no tire slip. The dynamic models make lateral force from slip angle: first with linear tires, <i>F<sub>y</sub>=Cα</i>, then with a Fiala brush tire that saturates at <i>μF<sub>z</sub></i>.</p>
+  </div>
+  <div class="models" role="group" aria-label="Models shown">
+    <label class="chip" style="--c:var(--kin)"><input type="checkbox" id="en_kin" checked><span class="line"></span>Kinematic</label>
+    <label class="chip" style="--c:var(--lin)"><input type="checkbox" id="en_lin" checked><span class="line"></span>Dynamic · linear</label>
+    <label class="chip" style="--c:var(--nl)"><input type="checkbox" id="en_nl" checked><span class="line"></span>Dynamic · Fiala</label>
+  </div>
+</header>
+
+<div class="main">
+  <aside class="panel side">
+    <section id="man"><h2>Maneuver</h2>
+      <label class="ctl"><span class="row">Steering input</span>
+        <select id="scn">
+          <option value="step">Step steer (turn onto a circle)</option>
+          <option value="ramp">Slow ramp steer (0 → δ over 20 s)</option>
+          <option value="sine">Continuous sine steer</option>
+          <option value="lane">Single sine (lane change)</option>
+        </select>
+      </label>
+    </section>
+    <section id="veh"><h2>Vehicle</h2>
+      <label class="ctl"><span class="row">Preset</span>
+        <select id="preset">
+          <option value="mild">Mild understeer (default)</option>
+          <option value="strong">Strong understeer</option>
+          <option value="neutral">Neutral steer (K ≈ 0)</option>
+          <option value="over">Oversteer (try v &gt; v_crit)</option>
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+    </section>
+    <section><h2>Derived</h2><dl class="spec" id="info"></dl></section>
+  </aside>
+
+  <div class="panel stage">
+    <div class="viewport">
+      <canvas id="world" aria-label="Top view of the three vehicles and their paths"></canvas>
+      <div class="hud"><span><em>t</em><b id="hud_t">0.00</b> s</span><span><em>δ</em><b id="hud_d">0.00</b>°</span><span><em>v</em><b id="hud_v">20</b> m/s</span><span id="hud_g" hidden></span></div>
+    </div>
+    <div class="bar">
+      <button id="play" class="primary">Pause</button>
+      <button id="restart">Restart</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Time">
+      <label>Playback <select id="rate"><option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select>×</label>
+    </div>
+    <div class="scroll"><table id="read"></table></div>
+    <p class="note">The black arrow from the CG is the velocity direction, so its angle to the body is the sideslip β. Colored arrows at the axles are lateral tire forces, length ∝ F<sub>y</sub>/F<sub>z</sub>. Dots on the paths mark 1 s intervals. F<sub>y</sub>/μF<sub>z</sub> above 1 (red) means the linear tire is asking for more grip than the road has.</p>
+  </div>
+</div>
+
+<div class="plots">
+  <figure class="panel"><h3>Steer angle δ</h3><figcaption>Road-wheel angle, deg.</figcaption><canvas id="pDelta"></canvas></figure>
+  <figure class="panel"><h3>Yaw rate r</h3><figcaption>deg/s. Dashed gray is the linear steady state vδ/(L+Kv²), which the dynamic models reach after a lag.</figcaption><canvas id="pR"></canvas></figure>
+  <figure class="panel"><h3>Lateral acceleration a<sub>y</sub></h3><figcaption>In g. The Fiala model caps near μ.</figcaption><canvas id="pAy"></canvas></figure>
+  <figure class="panel"><h3>Sideslip β at CG</h3><figcaption>deg. Kinematic β always points into the turn. Dynamic β goes negative at speed because the rear axle needs slip to make force.</figcaption><canvas id="pBeta"></canvas></figure>
+  <figure class="panel"><h3>Slip angles</h3><figcaption>deg. Solid is front α<sub>f</sub>, dashed is rear α<sub>r</sub>. The kinematic model has zero slip by assumption.</figcaption><canvas id="pAlpha"></canvas></figure>
+  <figure class="panel"><h3>Tire curves</h3><figcaption>F<sub>y</sub>/F<sub>z</sub> vs α. Dark is front, light is rear. Dashed is linear, solid is Fiala. Current operating point: ● front, ■ rear.</figcaption><canvas id="pTire"></canvas></figure>
+  <figure class="panel"><h3>Handling diagram</h3><figcaption>δ − L/R (deg) vs a<sub>y</sub> (g). The slope is the understeer gradient K; dashed gray is theory. Best seen with the slow ramp.</figcaption><canvas id="pHand"></canvas></figure>
+  <figure class="panel"><h3>Yaw-rate gain vs speed</h3><figcaption>Steady-state r/δ (1/s). Kinematic is v/L; linear dynamic is v/(L+Kv²). The solid vertical line marks the current speed.</figcaption><canvas id="pGain"></canvas></figure>
+</div>
+
+<div class="lower">
+  <section class="panel">
+    <h2>Things to try</h2>
+    <ul class="tries">
+      <li><span class="tag">5 m/s</span><span>Step steer at low speed: all three paths overlap. The kinematic model is fine when lateral acceleration is small.</span></li>
+      <li><span class="tag">30 m/s</span><span>Now raise the speed. The kinematic car turns on a much tighter circle, instantly. The dynamic cars lag, overshoot slightly in yaw rate, and settle on a larger radius (understeer).</span></li>
+      <li><span class="tag">ramp 8°</span><span>At 20 m/s the linear model draws a straight line of slope K on the handling diagram. The Fiala model bends upward as the front axle saturates (limit understeer), and a<sub>y</sub> caps near μ.</span></li>
+      <li><span class="tag">oversteer</span><span>Push speed past v<sub>crit</sub>: the linear model diverges and spins. With μ = 0.9 the Fiala model saturates the rear first and spins too.</span></li>
+      <li><span class="tag">sine 1.5 Hz</span><span>Kinematic yaw rate follows δ with no phase lag. The dynamic models lag and lose amplitude. That is the yaw dynamics the kinematic model throws away.</span></li>
+      <li><span class="tag">μ 0.3</span><span>On the neutral preset, step-steer: linear and Fiala split early, and the operating points slide onto the flat top of the tire curve.</span></li>
+    </ul>
+  </section>
+  <section class="panel eqs">
+    <h2>Equations</h2>
+    <h4>Kinematic: no slip, wheel velocity along the wheel</h4>
+    <div class="eq" data-tex="\beta = \arctan\!\left(\frac{l_r}{L}\tan\delta\right),\qquad \dot\psi = \frac{v\cos\beta\,\tan\delta}{L},\qquad \dot x = v\cos(\psi+\beta),\quad \dot y = v\sin(\psi+\beta)"></div>
+    <h4>Dynamic: lateral + yaw, v<sub>x</sub> constant</h4>
+    <div class="eq" data-tex="m(\dot v_y + v_x r) = F_{yf}\cos\delta + F_{yr},\qquad I_z\dot r = l_f F_{yf}\cos\delta - l_r F_{yr}"></div>
+    <div class="eq" data-tex="\alpha_f = \delta - \arctan\frac{v_y + l_f r}{v_x},\qquad \alpha_r = -\arctan\frac{v_y - l_r r}{v_x},\qquad F_{zf} = mg\frac{l_r}{L},\quad F_{zr} = mg\frac{l_f}{L}"></div>
+    <h4>Tires: linear vs Fiala brush</h4>
+    <div class="eq" data-tex="F_y = C\alpha \qquad\text{vs}\qquad F_y = \begin{cases} C\tan\alpha - \dfrac{C^2}{3\mu F_z}\lvert\tan\alpha\rvert\tan\alpha + \dfrac{C^3}{27\mu^2F_z^2}\tan^3\alpha, & \lvert\tan\alpha\rvert < \dfrac{3\mu F_z}{C} \\[4pt] \mu F_z\,\operatorname{sgn}\alpha, & \text{otherwise}\end{cases}"></div>
+    <h4>Understeer gradient</h4>
+    <div class="eq" data-tex="\delta_{ss} = \frac{L}{R} + K a_y,\qquad K = \frac{m}{L}\left(\frac{l_r}{C_f} - \frac{l_f}{C_r}\right) = \frac{F_{zf}}{g\,C_f} - \frac{F_{zr}}{g\,C_r}"></div>
+    <div class="eq" data-tex="\left.\frac{r}{\delta}\right|_{ss} = \frac{v}{L + K v^2},\qquad v_{ch} = \sqrt{L/K}\ \ (K>0),\qquad v_{crit} = \sqrt{-L/K}\ \ (K<0)"></div>
+    <p>Both dynamic models hold v<sub>x</sub> constant, ignore load transfer, and use the same μ on both axles. The linear model also uses small-angle kinematics, so its steady state matches the K formula exactly.</p>
+  </section>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script>
+const D2R = Math.PI / 180, R2D = 180 / Math.PI, G = 9.81, DT = 0.001, REC = 10;
+const NAME = { kin: 'Kinematic', lin: 'Dynamic · linear', nl: 'Dynamic · Fiala' };
+const MODELS = ['kin', 'lin', 'nl'];
+const $ = id => document.getElementById(id);
+let TH = {}, COL = {};
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement), g = k => cs.getPropertyValue('--' + k).trim();
+  TH = { plot: g('plot'), grid: g('grid'), axis: g('axis'), tick: g('tick'), ref: g('ref'), ink: g('ink'), ink2: g('ink2'), bad: g('bad'), muted: g('muted') };
+  COL = { kin: g('kin'), lin: g('lin'), nl: g('nl') };
+}
+const MONO = '"IBM Plex Mono", ui-monospace, monospace';
+
+// id, label, min, max, step, default, unit, decimals, group
+const SPEC = [
+  ['v', 'Speed v', 2, 40, 0.5, 20, 'm/s', 1, 'man'],
+  ['amp', 'Steer amplitude δ', 0.5, 12, 0.1, 3, '°', 1, 'man'],
+  ['freq', 'Sine frequency', 0.1, 2, 0.05, 0.5, 'Hz', 2, 'man'],
+  ['m', 'Mass m', 800, 3000, 10, 1500, 'kg', 0, 'veh'],
+  ['Iz', 'Yaw inertia I_z', 800, 6000, 50, 2250, 'kg·m²', 0, 'veh'],
+  ['lf', 'CG → front axle l_f', 0.8, 2.0, 0.01, 1.2, 'm', 2, 'veh'],
+  ['lr', 'CG → rear axle l_r', 0.8, 2.0, 0.01, 1.4, 'm', 2, 'veh'],
+  ['Cf', 'Front stiffness C_f', 20000, 200000, 100, 80000, 'N/rad', 0, 'veh'],
+  ['Cr', 'Rear stiffness C_r', 20000, 200000, 100, 100000, 'N/rad', 0, 'veh'],
+  ['mu', 'Friction μ', 0.2, 1.2, 0.05, 0.9, '', 2, 'veh'],
+];
+const sub = s => s.replace(/_(\w)/g, '<sub>$1</sub>');
+for (const [id, lab, mn, mx, st, df, un, dec, grp] of SPEC) {
+  const l = document.createElement('label'); l.className = 'ctl';
+  l.innerHTML = `<span class="row"><span>${sub(lab)}</span><output id="${id}_v"></output></span><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" value="${df}">`;
+  $(grp).appendChild(l);
+}
+const fmtN = (v, d) => d === 0 ? Math.round(v).toLocaleString('en-US') : v.toFixed(d);
+const showVal = () => { for (const s of SPEC) $(s[0] + '_v').textContent = fmtN(+$(s[0]).value, s[7]) + (s[6] ? ' ' + s[6] : ''); };
+
+const PRESETS = {
+  mild: () => ({ Cf: 80000, Cr: 100000 }),
+  strong: () => ({ Cf: 55000, Cr: 120000 }),
+  neutral: () => ({ Cf: 80000, Cr: 80000 * +$('lf').value / +$('lr').value }),
+  over: () => ({ Cf: 110000, Cr: 65000 }),
+};
+const SUGGEST_AMP = { step: 3, ramp: 8, sine: 2, lane: 2 };
+
+function params() {
+  const p = {};
+  for (const s of SPEC) p[s[0]] = +$(s[0]).value;
+  p.scn = $('scn').value;
+  p.L = p.lf + p.lr;
+  p.Fzf = p.m * G * p.lr / p.L; p.Fzr = p.m * G * p.lf / p.L;
+  p.K = p.m / p.L * (p.lr / p.Cf - p.lf / p.Cr);
+  const f = p.freq;
+  p.T = { step: 10, ramp: 20, sine: Math.min(20, Math.max(8, 4 / f)), lane: 0.5 + 1 / f + 6 }[p.scn];
+  return p;
+}
+
+function steer(t, p) {
+  const A = p.amp * D2R;
+  switch (p.scn) {
+    case 'step': return t < 0.5 ? 0 : A * Math.min((t - 0.5) / 0.1, 1);
+    case 'ramp': return A * Math.min(t / 20, 1);
+    case 'sine': return A * Math.sin(2 * Math.PI * p.freq * t);
+    case 'lane': return (t > 0.5 && t < 0.5 + 1 / p.freq) ? A * Math.sin(2 * Math.PI * p.freq * (t - 0.5)) : 0;
+  }
+}
+
+function fiala(a, C, Fz, mu) {
+  const t = Math.tan(a), tsl = 3 * mu * Fz / C;
+  if (Math.abs(t) >= tsl) return mu * Fz * Math.sign(a);
+  return C * t - C * C * Math.abs(t) * t / (3 * mu * Fz) + C * C * C * t * t * t / (27 * mu * mu * Fz * Fz);
+}
+
+// state [x, y, psi, vy, r]
+function dyn(s, d, p, nl) {
+  const vx = p.v, vy = s[3], r = s[4];
+  let af, ar, Ff, Fr, cd;
+  if (nl) {
+    af = d - Math.atan2(vy + p.lf * r, vx); ar = -Math.atan2(vy - p.lr * r, vx);
+    Ff = fiala(af, p.Cf, p.Fzf, p.mu); Fr = fiala(ar, p.Cr, p.Fzr, p.mu); cd = Math.cos(d);
+  } else {
+    af = d - (vy + p.lf * r) / vx; ar = -(vy - p.lr * r) / vx;
+    Ff = p.Cf * af; Fr = p.Cr * ar; cd = 1;
+  }
+  const c = Math.cos(s[2]), sn = Math.sin(s[2]), ay = (Ff * cd + Fr) / p.m;
+  return { d: [vx * c - vy * sn, vx * sn + vy * c, r, ay - vx * r, (p.lf * Ff * cd - p.lr * Fr) / p.Iz], af, ar, Ff, Fr, ay };
+}
+
+function rk4(f, s, t, h) {
+  const k1 = f(t, s), a = s.map((v, i) => v + h / 2 * k1[i]);
+  const k2 = f(t + h / 2, a), b = s.map((v, i) => v + h / 2 * k2[i]);
+  const k3 = f(t + h / 2, b), c = s.map((v, i) => v + h * k3[i]);
+  const k4 = f(t + h, c);
+  return s.map((v, i) => v + h / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+}
+
+function simulate(p) {
+  const N = Math.round(p.T / DT), M = Math.floor(N / REC) + 1;
+  const arr = () => new Float64Array(M);
+  const mk = () => ({ x: arr(), y: arr(), psi: arr(), r: arr(), ay: arr(), beta: arr(), af: arr(), ar: arr(), Ff: arr(), Fr: arr(), n: 0, end: null });
+  const out = { t: arr(), del: arr(), M, kin: mk(), lin: mk(), nl: mk() };
+  const k = p.lr / p.L;
+  const fk = (t, s) => { const d = steer(t, p), b = Math.atan(k * Math.tan(d)); return [p.v * Math.cos(s[2] + b), p.v * Math.sin(s[2] + b), p.v * Math.cos(b) * Math.tan(d) / p.L]; };
+  const fl = (t, s) => dyn(s, steer(t, p), p, false).d;
+  const fn = (t, s) => dyn(s, steer(t, p), p, true).d;
+  let sk = [0, 0, 0], sl = [0, 0, 0, 0, 0], sn = [0, 0, 0, 0, 0];
+  const alive = { lin: true, nl: true };
+  const recDyn = (key, s, d, j, t, nl) => {
+    const o = dyn(s, d, p, nl), m = out[key], beta = Math.atan2(s[3], p.v);
+    m.x[j] = s[0]; m.y[j] = s[1]; m.psi[j] = s[2]; m.r[j] = s[4]; m.ay[j] = o.ay; m.beta[j] = beta;
+    m.af[j] = o.af; m.ar[j] = o.ar; m.Ff[j] = o.Ff; m.Fr[j] = o.Fr; m.n = j + 1;
+    if (Math.abs(beta) > 30 * D2R || Math.abs(s[4]) > 3) { alive[key] = false; m.end = t; }
+  };
+  for (let i = 0; i <= N; i++) {
+    const t = i * DT;
+    if (i % REC === 0) {
+      const j = i / REC; if (j >= M) break;
+      const d = steer(t, p);
+      out.t[j] = t; out.del[j] = d;
+      const b = Math.atan(k * Math.tan(d)), r = p.v * Math.cos(b) * Math.tan(d) / p.L;
+      const dd = (steer(t + 1e-4, p) - steer(Math.max(0, t - 1e-4), p)) / (t > 0 ? 2e-4 : 1e-4);
+      const db = k / Math.cos(d) ** 2 / (1 + (k * Math.tan(d)) ** 2) * dd;
+      const m = out.kin;
+      m.x[j] = sk[0]; m.y[j] = sk[1]; m.psi[j] = sk[2]; m.r[j] = r; m.ay[j] = p.v * (r + db); m.beta[j] = b;
+      m.af[j] = 0; m.ar[j] = 0; m.Ff[j] = NaN; m.Fr[j] = NaN; m.n = j + 1;
+      if (alive.lin) recDyn('lin', sl, d, j, t, false);
+      if (alive.nl) recDyn('nl', sn, d, j, t, true);
+    }
+    if (i === N) break;
+    sk = rk4(fk, sk, t, DT);
+    if (alive.lin) sl = rk4(fl, sl, t, DT);
+    if (alive.nl) sn = rk4(fn, sn, t, DT);
+  }
+  return out;
+}
+
+// ---------- state ----------
+let P, S, bounds, derived, tc = 0, playing = true, last = null, dirty = true;
+const enabled = m => $('en_' + m).checked;
+
+function recompute() {
+  showVal();
+  P = params(); S = simulate(P);
+  if (tc > P.T) tc = P.T;
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const m of MODELS) if (enabled(m)) { const d = S[m]; for (let i = 0; i < d.n; i++) { x0 = Math.min(x0, d.x[i]); x1 = Math.max(x1, d.x[i]); y0 = Math.min(y0, d.y[i]); y1 = Math.max(y1, d.y[i]); } }
+  if (!isFinite(x0)) { x0 = 0; x1 = 30; y0 = -10; y1 = 10; }
+  const span = Math.max(30, x1 - x0, y1 - y0), mg = 0.08 * span + 4;
+  bounds = { x0: x0 - mg, x1: x1 + mg, y0: y0 - mg, y1: y1 + mg };
+  const M = S.M;
+  derived = { rss: new Float64Array(M), hand: {}, handX: {} };
+  const gss = P.L + P.K * P.v * P.v;
+  for (let i = 0; i < M; i++) derived.rss[i] = gss > 0 ? P.v * S.del[i] / gss * R2D : NaN;
+  for (const m of MODELS) {
+    const d = S[m], hx = new Float64Array(d.n), hy = new Float64Array(d.n);
+    for (let i = 0; i < d.n; i++) { hx[i] = d.ay[i] / G; hy[i] = (S.del[i] - P.L * d.r[i] / P.v) * R2D; }
+    derived.hand[m] = hy; derived.handX[m] = hx;
+  }
+  updateInfo();
+  dirty = true;
+}
+
+function updateInfo() {
+  const p = P, Kdg = p.K * G * R2D;
+  const bal = Math.abs(Kdg) < 0.05 ? 'neutral' : p.K > 0 ? 'understeer' : 'oversteer';
+  let h = `<div class="hl"><span>Understeer gradient K</span><span><b>${Kdg.toFixed(2)}</b> deg/g</span></div>`;
+  const rows = [
+    ['Balance', `<span class="pill ${bal === 'oversteer' ? 'bad' : ''}">${bal}</span>`],
+    ['K (SI)', (p.K * 1000).toFixed(2) + ' mrad·s²/m'],
+    ['Wheelbase L', p.L.toFixed(2) + ' m'],
+    ['F<sub>zf</sub> / F<sub>zr</sub>', (p.Fzf / 1000).toFixed(2) + ' / ' + (p.Fzr / 1000).toFixed(2) + ' kN'],
+  ];
+  if (p.K > 1e-6) rows.push(['Characteristic speed v<sub>ch</sub>', Math.sqrt(p.L / p.K).toFixed(1) + ' m/s']);
+  if (p.K < -1e-6) {
+    const vc = Math.sqrt(-p.L / p.K);
+    rows.push(['Critical speed v<sub>crit</sub>', `<span class="${p.v > vc ? 'bad' : ''}">${vc.toFixed(1)} m/s</span>`]);
+  }
+  const gk = p.v / p.L, gl = p.v / (p.L + p.K * p.v * p.v);
+  rows.push(['r/δ kinematic', gk.toFixed(2) + ' 1/s']);
+  rows.push(['r/δ linear, steady', gl > 0 ? gl.toFixed(2) + ' 1/s' : '<span class="bad">unstable</span>']);
+  const d = p.amp * D2R;
+  rows.push([`R at δ=${p.amp.toFixed(1)}°, kinematic`, (p.L / Math.tan(d) / Math.cos(Math.atan(p.lr / p.L * Math.tan(d)))).toFixed(0) + ' m']);
+  if (gl > 0) rows.push([`R at δ=${p.amp.toFixed(1)}°, linear`, ((p.L + p.K * p.v * p.v) / d).toFixed(0) + ' m']);
+  h += rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('');
+  if (p.K < -1e-6 && p.v > Math.sqrt(-p.L / p.K)) h += `<dt class="bad" style="grid-column:1/-1">v is above v_crit, so the linear model is unstable.</dt>`;
+  $('info').innerHTML = h;
+}
+
+// ---------- drawing helpers ----------
+function prep(cv) {
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  const W = Math.round(w * dpr), H = Math.round(h * dpr);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.fillStyle = TH.plot; c.fillRect(0, 0, w, h);
+  return { c, w, h };
+}
+function nice(x) { const e = Math.pow(10, Math.floor(Math.log10(x))), f = x / e; return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * e; }
+function ticks(a, b, n) { const s = nice((b - a) / n), o = []; for (let v = Math.ceil(a / s) * s; v <= b + s * 1e-6; v += s) o.push(Math.abs(v) < s * 1e-6 ? 0 : v); return o; }
+function tl(v) { const a = Math.abs(v); return a >= 1000 ? v.toFixed(0) : a >= 10 ? +v.toFixed(1) + '' : +v.toFixed(2) + ''; }
+function arrow(c, x0, y0, x1, y1, col, w) {
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy); if (L < 2) return;
+  const ux = dx / L, uy = dy / L, h = Math.min(8, L * 0.4);
+  c.strokeStyle = col; c.fillStyle = col; c.lineWidth = w; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1 - ux * h * 0.6, y1 - uy * h * 0.6); c.stroke();
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x1 - ux * h - uy * h * 0.45, y1 - uy * h + ux * h * 0.45); c.lineTo(x1 - ux * h + uy * h * 0.45, y1 - uy * h - ux * h * 0.45); c.closePath(); c.fill();
+}
+
+function plot(cv, o) {
+  const { c, w, h } = prep(cv), Lm = 44, Rm = 10, Tm = 8, Bm = 22, pw = w - Lm - Rm, ph = h - Tm - Bm;
+  const [x0, x1] = o.xr; let y0, y1;
+  if (o.yr) [y0, y1] = o.yr;
+  else {
+    y0 = Infinity; y1 = -Infinity;
+    for (const s of o.series) for (let i = 0; i < s.n; i++) { const v = s.y[i], xv = s.x[i]; if (isFinite(v) && xv >= x0 && xv <= x1) { if (v < y0) y0 = v; if (v > y1) y1 = v; } }
+    if (!isFinite(y0)) { y0 = -1; y1 = 1; }
+    y0 = Math.min(y0, 0); y1 = Math.max(y1, 0);
+    const ms = o.minSpan || 0.1; if (y1 - y0 < ms) { const mid = (y0 + y1) / 2; y0 = mid - ms / 2; y1 = mid + ms / 2; }
+    const pad = (y1 - y0) * 0.08; y0 -= pad; y1 += pad;
+  }
+  const X = v => Lm + (v - x0) / (x1 - x0) * pw, Y = v => Tm + (1 - (v - y0) / (y1 - y0)) * ph;
+  c.font = `10.5px ${MONO}`; c.lineWidth = 1;
+  c.fillStyle = TH.tick; c.textAlign = 'right'; c.textBaseline = 'middle';
+  for (const v of ticks(y0, y1, 5)) { c.strokeStyle = v === 0 ? TH.axis : TH.grid; c.beginPath(); c.moveTo(Lm, Y(v)); c.lineTo(Lm + pw, Y(v)); c.stroke(); c.fillText(tl(v), Lm - 6, Y(v)); }
+  c.textAlign = 'center'; c.textBaseline = 'top';
+  for (const v of ticks(x0, x1, 6)) { c.strokeStyle = v === 0 ? TH.axis : TH.grid; c.beginPath(); c.moveTo(X(v), Tm); c.lineTo(X(v), Tm + ph); c.stroke(); c.fillText(tl(v), X(v), Tm + ph + 5); }
+  if (o.xlabel) { c.textAlign = 'right'; c.textBaseline = 'bottom'; c.fillStyle = TH.tick; c.fillText(o.xlabel, Lm + pw - 3, Tm + ph - 3); }
+  c.save(); c.beginPath(); c.rect(Lm, Tm, pw, ph); c.clip();
+  c.lineJoin = 'round';
+  for (const s of o.series) {
+    c.strokeStyle = s.color; c.lineWidth = s.w || 1.8; c.setLineDash(s.dash || []);
+    c.beginPath(); let pen = false;
+    for (let i = 0; i < s.n; i++) { const v = s.y[i]; if (!isFinite(v)) { pen = false; continue; } const px = X(s.x[i]), py = Y(v); pen ? c.lineTo(px, py) : c.moveTo(px, py); pen = true; }
+    c.stroke();
+  }
+  c.setLineDash([]);
+  if (o.extra) o.extra(c, X, Y);
+  if (o.cursor != null) { c.strokeStyle = TH.tick; c.globalAlpha = .6; c.lineWidth = 1; c.beginPath(); c.moveTo(X(o.cursor), Tm); c.lineTo(X(o.cursor), Tm + ph); c.stroke(); c.globalAlpha = 1; }
+  c.restore();
+}
+function dot(c, x, y, col, sq) { c.fillStyle = col; c.strokeStyle = TH.plot; c.lineWidth = 1.5; c.beginPath(); sq ? c.rect(x - 4.5, y - 4.5, 9, 9) : c.arc(x, y, 5, 0, 7); c.fill(); c.stroke(); }
+
+// ---------- top view ----------
+function drawCar(c, px, py, k, psi, d, col, beta, Ff, Fr) {
+  c.save(); c.translate(px, py); c.rotate(-psi);
+  const B = (x, y) => [x * k, -y * k];
+  const bx = -(P.lr + 0.7) * k, bw = (P.L + 1.4) * k, bh = 1.7 * k;
+  c.globalAlpha = 0.16; c.fillStyle = col;
+  c.beginPath(); c.roundRect ? c.roundRect(bx, -bh / 2, bw, bh, bh * 0.22) : c.rect(bx, -bh / 2, bw, bh); c.fill();
+  c.globalAlpha = 1; c.strokeStyle = col; c.lineWidth = 1.4; c.stroke();
+  c.lineWidth = 1; c.beginPath(); c.moveTo(...B(-P.lr, 0)); c.lineTo(...B(P.lf, 0)); c.stroke();
+  const wheel = (ax, ang) => { c.save(); c.translate(ax * k, 0); c.rotate(-ang); c.fillStyle = TH.ink; c.fillRect(-0.34 * k, -0.12 * k, 0.68 * k, 0.24 * k); c.restore(); };
+  wheel(-P.lr, 0); wheel(P.lf, d);
+  c.fillStyle = col; c.beginPath(); c.arc(0, 0, Math.max(2.5, 0.18 * k), 0, 7); c.fill();
+  arrow(c, 0, 0, ...B(Math.cos(beta) * 2.6, Math.sin(beta) * 2.6), TH.ink, 1.5);
+  if (isFinite(Ff)) {
+    const sc = 1.8, lf = Ff / P.Fzf * sc, lr = Fr / P.Fzr * sc;
+    arrow(c, ...B(P.lf, 0), ...B(P.lf - Math.sin(d) * lf, Math.cos(d) * lf), col, 2.4);
+    arrow(c, ...B(-P.lr, 0), ...B(-P.lr, lr), col, 2.4);
+  }
+  c.restore();
+}
+
+function drawWorld() {
+  const cv = $('world'), { c, w, h } = prep(cv), b = bounds;
+  const s = Math.min((w - 20) / (b.x1 - b.x0), (h - 60) / (b.y1 - b.y0));
+  const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+  const PX = x => w / 2 + (x - cx) * s, PY = y => h / 2 + 10 - (y - cy) * s;
+  const gs = nice(w / s / 8);
+  c.strokeStyle = TH.grid; c.lineWidth = 1;
+  const wx0 = cx - w / 2 / s, wx1 = cx + w / 2 / s, wy0 = cy - h / 2 / s - 20 / s, wy1 = cy + h / 2 / s + 20 / s;
+  for (let x = Math.ceil(wx0 / gs) * gs; x < wx1; x += gs) { c.beginPath(); c.moveTo(PX(x), 0); c.lineTo(PX(x), h); c.stroke(); }
+  for (let y = Math.ceil(wy0 / gs) * gs; y < wy1; y += gs) { c.beginPath(); c.moveTo(0, PY(y)); c.lineTo(w, PY(y)); c.stroke(); }
+  const idx = Math.min(Math.round(tc / (DT * REC)), S.M - 1);
+  const g = Math.max(1, 30 / (P.L * s));
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  for (const m of MODELS) {
+    if (!enabled(m)) continue;
+    const d = S[m], n = d.n, j = Math.min(idx, n - 1);
+    c.strokeStyle = COL[m]; c.lineWidth = 1.5; c.globalAlpha = 0.25; c.setLineDash([4, 4]);
+    c.beginPath(); for (let i = 0; i < n; i++) i ? c.lineTo(PX(d.x[i]), PY(d.y[i])) : c.moveTo(PX(d.x[i]), PY(d.y[i])); c.stroke();
+    c.setLineDash([]); c.globalAlpha = 1; c.lineWidth = 2.6;
+    c.beginPath(); for (let i = 0; i <= j; i++) i ? c.lineTo(PX(d.x[i]), PY(d.y[i])) : c.moveTo(PX(d.x[i]), PY(d.y[i])); c.stroke();
+    c.fillStyle = COL[m];
+    for (let i = 100; i <= j; i += 100) { c.beginPath(); c.arc(PX(d.x[i]), PY(d.y[i]), 2.6, 0, 7); c.fill(); }
+  }
+  for (const m of MODELS) {
+    if (!enabled(m)) continue;
+    const d = S[m], j = Math.min(idx, d.n - 1);
+    drawCar(c, PX(d.x[j]), PY(d.y[j]), s * g, d.psi[j], S.del[j], COL[m], d.beta[j], d.Ff[j], d.Fr[j]);
+  }
+  const sb = nice(w / s / 5), sy = h - 16, sx = w - 16 - sb * s;
+  c.strokeStyle = TH.ink; c.lineWidth = 2; c.lineCap = 'butt';
+  c.beginPath(); c.moveTo(sx, sy - 4); c.lineTo(sx, sy); c.lineTo(sx + sb * s, sy); c.lineTo(sx + sb * s, sy - 4); c.stroke();
+  c.font = `11px ${MONO}`; c.fillStyle = TH.ink; c.textAlign = 'right'; c.textBaseline = 'bottom';
+  c.fillText(sb + ' m', w - 16, sy - 6);
+  $('hud_t').textContent = tc.toFixed(2);
+  $('hud_d').textContent = (S.del[idx] * R2D).toFixed(2);
+  $('hud_v').textContent = P.v;
+  const hg = $('hud_g'); hg.hidden = !(g > 1.05); hg.textContent = `cars drawn ${g.toFixed(1)}× scale`;
+}
+
+// ---------- readout ----------
+function drawTable() {
+  const idx = Math.min(Math.round(tc / (DT * REC)), S.M - 1);
+  let hdr = '<tr><th>Model</th><th>r (deg/s)</th><th>a<sub>y</sub> (g)</th><th>β (deg)</th><th>R (m)</th><th>α<sub>f</sub> (deg)</th><th>α<sub>r</sub> (deg)</th><th>F<sub>yf</sub>/μF<sub>zf</sub></th><th>F<sub>yr</sub>/μF<sub>zr</sub></th><th>Status</th></tr>';
+  let rows = '';
+  for (const m of MODELS) {
+    if (!enabled(m)) continue;
+    const d = S[m], j = Math.min(idx, d.n - 1), r = d.r[j];
+    const R = Math.abs(r) > 1e-4 ? Math.abs(P.v / r).toFixed(0) : '∞';
+    let uf = '–', ur = '–';
+    if (m !== 'kin') {
+      const a = Math.abs(d.Ff[j]) / (P.mu * P.Fzf), b = Math.abs(d.Fr[j]) / (P.mu * P.Fzr);
+      uf = `<span class="${a > 1.001 ? 'bad' : ''}">${a.toFixed(2)}</span>`; ur = `<span class="${b > 1.001 ? 'bad' : ''}">${b.toFixed(2)}</span>`;
+    }
+    const st = d.end != null && idx >= d.n - 1 ? `<span class="bad">spun out at ${d.end.toFixed(2)} s</span>` : 'ok';
+    rows += `<tr><td><span class="sw" style="background:var(--${m})"></span>${NAME[m]}</td><td>${(r * R2D).toFixed(2)}</td><td>${(d.ay[j] / G).toFixed(3)}</td><td>${(d.beta[j] * R2D).toFixed(2)}</td><td>${R}</td><td>${m === 'kin' ? '0' : (d.af[j] * R2D).toFixed(2)}</td><td>${m === 'kin' ? '0' : (d.ar[j] * R2D).toFixed(2)}</td><td>${uf}</td><td>${ur}</td><td>${st}</td></tr>`;
+  }
+  $('read').innerHTML = hdr + rows;
+}
+
+// ---------- plots ----------
+function drawPlots() {
+  const t = S.t, M = S.M, xr = [0, P.T];
+  const idx = Math.min(Math.round(tc / (DT * REC)), M - 1);
+  const ser = (key, sc, extra = {}) => MODELS.filter(enabled).map(m => ({ x: t, y: S[m][key].map(v => v * sc), n: S[m].n, color: COL[m], ...extra }));
+  plot($('pDelta'), { xr, series: [{ x: t, y: S.del.map(v => v * R2D), n: M, color: TH.ink }], cursor: tc, xlabel: 't (s)' });
+  plot($('pR'), { xr, series: [{ x: t, y: derived.rss, n: M, color: TH.ref, dash: [5, 4], w: 1.3 }, ...ser('r', R2D)], cursor: tc, xlabel: 't (s)' });
+  plot($('pAy'), { xr, series: ser('ay', 1 / G), cursor: tc, xlabel: 't (s)', minSpan: 0.05 });
+  plot($('pBeta'), { xr, series: ser('beta', R2D), cursor: tc, xlabel: 't (s)' });
+  const al = [];
+  for (const m of ['lin', 'nl']) if (enabled(m)) {
+    al.push({ x: t, y: S[m].af.map(v => v * R2D), n: S[m].n, color: COL[m] });
+    al.push({ x: t, y: S[m].ar.map(v => v * R2D), n: S[m].n, color: COL[m], dash: [5, 3] });
+  }
+  plot($('pAlpha'), { xr, series: al, cursor: tc, xlabel: 't (s)' });
+
+  const A = [], ff = [], fr = [], lf = [], lr = [];
+  for (let i = 0; i <= 240; i++) {
+    const a = (-12 + i * 0.1) * D2R; A.push(a * R2D);
+    ff.push(fiala(a, P.Cf, P.Fzf, P.mu) / P.Fzf); fr.push(fiala(a, P.Cr, P.Fzr, P.mu) / P.Fzr);
+    lf.push(P.Cf * a / P.Fzf); lr.push(P.Cr * a / P.Fzr);
+  }
+  const ym = Math.max(0.6, 1.5 * P.mu);
+  plot($('pTire'), {
+    xr: [-12, 12], yr: [-ym, ym], xlabel: 'α (deg)',
+    series: [{ x: A, y: lf, n: 241, color: TH.ink, dash: [5, 4], w: 1.2 }, { x: A, y: lr, n: 241, color: TH.ink2, dash: [5, 4], w: 1.2 },
+             { x: A, y: ff, n: 241, color: TH.ink, w: 2 }, { x: A, y: fr, n: 241, color: TH.ink2, w: 2 }],
+    extra: (c, X, Y) => {
+      for (const m of ['lin', 'nl']) if (enabled(m)) {
+        const d = S[m], j = Math.min(idx, d.n - 1);
+        dot(c, X(d.af[j] * R2D), Y(d.Ff[j] / P.Fzf), COL[m], false);
+        dot(c, X(d.ar[j] * R2D), Y(d.Fr[j] / P.Fzr), COL[m], true);
+      }
+    }
+  });
+
+  let axMax = 0.1;
+  for (const m of MODELS) if (enabled(m)) for (const v of derived.handX[m]) axMax = Math.max(axMax, Math.abs(v));
+  axMax = Math.min(axMax * 1.08, 2);
+  const hs = MODELS.filter(enabled).map(m => ({ x: derived.handX[m], y: derived.hand[m], n: S[m].n, color: COL[m] }));
+  const Kdg = P.K * G * R2D;
+  plot($('pHand'), {
+    xr: [-axMax, axMax], xlabel: 'a_y (g)', minSpan: 0.5,
+    series: [{ x: [-axMax, axMax], y: [-Kdg * axMax, Kdg * axMax], n: 2, color: TH.ref, dash: [5, 4], w: 1.3 }, ...hs],
+    extra: (c, X, Y) => { for (const m of MODELS) if (enabled(m)) { const j = Math.min(idx, S[m].n - 1); dot(c, X(derived.handX[m][j]), Y(derived.hand[m][j]), COL[m], false); } }
+  });
+
+  const V = [], gk = [], gl = [];
+  for (let i = 0; i <= 160; i++) { const v = i * 0.25; V.push(v); gk.push(v / P.L); const den = P.L + P.K * v * v; gl.push(den > 0.05 ? v / den : NaN); }
+  const gmax = 40 / P.L * 1.05;
+  const vline = (c, X, Y, v, col, lab) => { c.strokeStyle = col; c.setLineDash([3, 3]); c.beginPath(); c.moveTo(X(v), Y(0)); c.lineTo(X(v), Y(gmax)); c.stroke(); c.setLineDash([]); c.fillStyle = col; c.font = `10.5px ${MONO}`; c.textAlign = 'left'; c.textBaseline = 'top'; c.fillText(lab, X(v) + 4, Y(gmax) + 3); };
+  plot($('pGain'), {
+    xr: [0, 40], yr: [0, gmax], xlabel: 'v (m/s)',
+    series: [{ x: V, y: gk, n: 161, color: COL.kin }, { x: V, y: gl, n: 161, color: COL.lin }],
+    extra: (c, X, Y) => {
+      if (P.K > 1e-6) { const vch = Math.sqrt(P.L / P.K); if (vch < 40) vline(c, X, Y, vch, TH.ref, 'v_ch'); }
+      if (P.K < -1e-6) { const vc = Math.sqrt(-P.L / P.K); if (vc < 40) vline(c, X, Y, vc, TH.bad, 'v_crit'); }
+      c.strokeStyle = TH.ink; c.lineWidth = 1; c.beginPath(); c.moveTo(X(P.v), Y(0)); c.lineTo(X(P.v), Y(gmax)); c.stroke();
+    }
+  });
+}
+
+function draw() { readTheme(); drawWorld(); drawTable(); drawPlots(); $('scrub').value = Math.round(tc / P.T * 1000); }
+
+// ---------- loop & events ----------
+const setPlay = v => { playing = v; $('play').textContent = v ? 'Pause' : 'Play'; };
+function frame(ts) {
+  if (playing && last != null) {
+    tc += (ts - last) / 1000 * +$('rate').value;
+    if (tc >= P.T) { tc = P.T; setPlay(false); }
+    dirty = true;
+  }
+  last = ts;
+  if (dirty) { draw(); dirty = false; }
+  requestAnimationFrame(frame);
+}
+$('play').onclick = () => { if (!playing && tc >= P.T) tc = 0; setPlay(!playing); dirty = true; };
+$('restart').onclick = () => { tc = 0; setPlay(true); dirty = true; };
+$('scrub').oninput = e => { tc = e.target.value / 1000 * P.T; setPlay(false); dirty = true; };
+for (const s of SPEC) $(s[0]).addEventListener('input', () => {
+  if (['Cf', 'Cr', 'lf', 'lr'].includes(s[0]) && $('preset').value !== 'custom') {
+    if (!(s[0] === 'lf' || s[0] === 'lr') || $('preset').value !== 'neutral') $('preset').value = 'custom';
+    else applyPreset();
+  }
+  recompute();
+});
+function applyPreset() { const k = $('preset').value; if (!PRESETS[k]) return; const v = PRESETS[k](); $('Cf').value = v.Cf; $('Cr').value = v.Cr; }
+$('preset').onchange = () => { applyPreset(); recompute(); };
+$('scn').onchange = () => { $('amp').value = SUGGEST_AMP[$('scn').value]; tc = 0; setPlay(true); recompute(); };
+for (const m of MODELS) $('en_' + m).onchange = recompute;
+window.addEventListener('resize', () => dirty = true);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => dirty = true);
+new MutationObserver(() => dirty = true).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+if (document.fonts) document.fonts.ready.then(() => dirty = true);
+
+document.querySelectorAll('.eq').forEach(el => {
+  const tex = el.dataset.tex;
+  try { katex.render(tex, el, { displayMode: true, output: 'mathml', throwOnError: false }); }
+  catch (e) { el.textContent = tex; }
+});
+
+recompute();
+requestAnimationFrame(frame);
+</script>
+
+</body></html>

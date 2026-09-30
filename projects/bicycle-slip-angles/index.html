@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bicycle model slip angles</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+  :root {
+    --bg1: #eef2ff; --bg2: #f8fafc; --card: #ffffff; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0;
+    --blue: #2563eb; --green: #16a34a; --orange: #ea7a00; --purple: #7c3aed; --gray: #64748b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px 14px 40px; color: var(--ink);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, var(--bg1), var(--bg2) 60%);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 20px;
+          box-shadow: 0 6px 24px rgba(15, 23, 42, .06); }
+  h1 { font-size: 21px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13.5px; margin: 0; line-height: 1.5; }
+
+  .eqs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+  .eq { background: #f8fafc; border: 1px solid var(--line); border-radius: 12px; padding: 2px 10px; overflow-x: auto; }
+  .eq .tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-top: 6px; }
+  .katex-display { margin: .35em 0 !important; }
+  @media (max-width: 720px) { .eqs { grid-template-columns: 1fr; } }
+
+  .stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .stat { text-align: center; padding: 10px 6px; border-radius: 14px; background: var(--card); border: 1px solid var(--line);
+          box-shadow: 0 4px 14px rgba(15,23,42,.05); }
+  .stat .k { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .stat .v { font-size: 21px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  @media (max-width: 900px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+
+  details.card summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+  pre { margin: 10px 0 0; font-size: 12.5px; line-height: 1.6; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 14px; align-items: start; }
+  .side { position: sticky; top: 12px; }
+  @media (max-width: 1000px) { .main { grid-template-columns: 1fr; } .side { position: static; } }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .dash { width: 20px; height: 0; border-top: 3px dashed; display: inline-block; }
+  canvas { width: 100%; height: auto; display: block; border-radius: 14px;
+           background: radial-gradient(circle at 50% 50%, #ffffff, #f1f5f9); border: 1px solid var(--line); }
+
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: #f1f5f9; border-radius: 12px; padding: 3px; gap: 3px; }
+  .seg label { text-align: center; font-size: 12.5px; font-weight: 600; padding: 8px 4px; border-radius: 9px; cursor: pointer; color: var(--muted); line-height: 1.25; }
+  .seg input { display: none; }
+  .seg input:checked + span { color: var(--ink); }
+  .seg label:has(input:checked) { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(15,23,42,.15); }
+  #eqInv { font-size: 12.5px; background: #f8fafc; border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; margin-top: 8px; display: none; overflow-x: auto; }
+
+  .grp { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+         color: var(--muted); margin-top: 10px; padding-bottom: 3px; border-bottom: 1px solid var(--line); }
+  .row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 8px; padding: 3px 0; transition: opacity .15s; }
+  .row.off { opacity: .45; }
+  .row label { font-size: 13.5px; font-weight: 600; }
+  .row .val { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; }
+  .row input[type=range] { grid-column: 1 / -1; width: 100%; height: 20px; cursor: pointer; }
+  .row input[type=range]:disabled { cursor: not-allowed; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <h1>Dynamic bicycle model: front &amp; rear slip angles</h1>
+    <p class="sub">Slip angle = wheel heading minus the direction the axle is actually moving. x forward, y left, angles and yaw rate positive counter-clockwise.</p>
+    <div class="eqs">
+      <div class="eq"><div class="tag">Front axle</div><div id="eqF"></div></div>
+      <div class="eq"><div class="tag">Rear axle (no rear steer)</div><div id="eqR"></div></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="k">Front slip &alpha;<sub>f</sub></div><div class="v" id="sAf" style="color:var(--orange)"></div></div>
+    <div class="stat"><div class="k">Rear slip &alpha;<sub>r</sub></div><div class="v" id="sAr" style="color:var(--orange)"></div></div>
+    <div class="stat"><div class="k">Steer &delta;</div><div class="v" id="sD" style="color:var(--purple)"></div></div>
+    <div class="stat"><div class="k">Lateral v<sub>y</sub></div><div class="v" id="sVy" style="color:var(--green)"></div></div>
+    <div class="stat"><div class="k">CG sideslip &beta;</div><div class="v" id="sB" style="color:var(--gray)"></div></div>
+    <div class="stat"><div class="k">Course &psi;+&beta;</div><div class="v" id="sC" style="color:var(--gray)"></div></div>
+  </div>
+
+  <details class="card"><summary>Step-by-step calculation</summary><pre id="out"></pre></details>
+
+  <div class="main">
+    <div class="card">
+      <div class="legend">
+        <span><i class="dash" style="border-color:var(--blue)"></i> wheel heading</span>
+        <span><i class="dot" style="background:var(--green)"></i> axle velocity V</span>
+        <span><i class="dot" style="background:var(--orange)"></i> slip angle &alpha;</span>
+        <span><i class="dot" style="background:var(--purple)"></i> heading &psi; / steer &delta;</span>
+        <span><i class="dot" style="background:var(--gray)"></i> CG velocity, world axis</span>
+        <span style="margin-left:auto">Axle spacing is exaggerated for readability; angles use the real l<sub>f</sub>, l<sub>r</sub>.</span>
+      </div>
+      <canvas id="cv"></canvas>
+    </div>
+
+    <div class="card side">
+      <div class="seg">
+        <label><input type="radio" name="mode" value="delta" checked><span>Set steer &delta; &amp; v<sub>y</sub></span></label>
+        <label><input type="radio" name="mode" value="slip"><span>Set slip &alpha;<sub>f</sub> &amp; &alpha;<sub>r</sub></span></label>
+      </div>
+      <div id="eqInv"></div>
+      <div id="controls"></div>
+      <div class="note">Changing &psi; rotates the whole picture but leaves &alpha;<sub>f</sub>, &alpha;<sub>r</sub> unchanged: slip angles depend only on body-frame quantities.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+const $ = id => document.getElementById(id);
+const C = { blue: '#2563eb', green: '#16a34a', orange: '#ea7a00', purple: '#7c3aed', gray: '#64748b', dark: '#1e293b' };
+let mode = 'delta';   // 'delta': inputs are delta, v_y   |   'slip': inputs are alpha_f, alpha_r
+
+// ---------- equations ----------
+const kx = (el, s, disp) => katex.render(s, el, { displayMode: disp, throwOnError: false });
+kx($('eqF'), String.raw`\alpha_f = \delta - \arctan\!\left(\frac{v_y + l_f r}{v_x}\right)`, true);
+kx($('eqR'), String.raw`\alpha_r = 0 - \arctan\!\left(\frac{v_y - l_r r}{v_x}\right)`, true);
+kx($('eqInv'), String.raw`v_y = l_r r - v_x\tan\alpha_r \qquad \delta = \alpha_f + \arctan\!\left(\frac{v_y + l_f r}{v_x}\right)`, true);
+
+// ---------- controls ----------
+const sgn = (v, d, u) => (v >= 0 ? '+' : '\u2212') + Math.abs(v).toFixed(d) + u;
+const defs = [
+  { grp: 'Front axle' },
+  { id: 'delta', label: 'Steer angle \u03B4', min: -45, max: 45, step: 0.5, val: 8, mode: 'delta', fmt: v => sgn(v, 1, '\u00B0'), color: C.purple },
+  { id: 'aF', label: 'Front slip \u03B1f', min: -30, max: 30, step: 0.1, val: 5, mode: 'slip', fmt: v => sgn(v, 1, '\u00B0'), color: C.orange },
+  { grp: 'Rear axle / lateral motion' },
+  { id: 'vy', label: 'Lateral speed v_y', min: -12, max: 12, step: 0.1, val: 1.5, mode: 'delta', fmt: v => sgn(v, 2, ' m/s'), color: C.green },
+  { id: 'aR', label: 'Rear slip \u03B1r', min: -30, max: 30, step: 0.1, val: -3, mode: 'slip', fmt: v => sgn(v, 1, '\u00B0'), color: C.orange },
+  { grp: 'Motion & heading' },
+  { id: 'vx', label: 'Longitudinal speed v_x', min: 1, max: 40, step: 0.5, val: 20, fmt: v => v.toFixed(1) + ' m/s', color: C.green },
+  { id: 'r', label: 'Yaw rate r', min: -1, max: 1, step: 0.01, val: 0.2, fmt: v => sgn(v, 2, ' rad/s'), color: C.green },
+  { id: 'psi', label: 'Vehicle heading \u03C8', min: -180, max: 180, step: 1, val: 20, fmt: v => sgn(v, 0, '\u00B0'), color: C.purple },
+  { grp: 'Geometry' },
+  { id: 'lf', label: 'CG to front axle l_f', min: 0.5, max: 2, step: 0.05, val: 1.2, fmt: v => v.toFixed(2) + ' m', color: C.gray },
+  { id: 'lr', label: 'CG to rear axle l_r', min: 0.5, max: 2, step: 0.05, val: 1.4, fmt: v => v.toFixed(2) + ' m', color: C.gray },
+];
+const ctl = $('controls');
+defs.forEach(d => {
+  if (d.grp) { const g = document.createElement('div'); g.className = 'grp'; g.textContent = d.grp; ctl.appendChild(g); return; }
+  const row = document.createElement('div'); row.className = 'row'; d.row = row;
+  row.innerHTML = `<label for="${d.id}">${d.label}</label><span class="val" id="val_${d.id}"></span>
+    <input id="${d.id}" type="range" min="${d.min}" max="${d.max}" step="${d.step}" value="${d.val}" style="accent-color:${d.color}">`;
+  ctl.appendChild(row);
+});
+const get = id => +$(id).value;
+
+// current state from the active driver inputs (angles in radians)
+function compute() {
+  const psi = get('psi') * D2R, vx = get('vx'), r = get('r'), lf = get('lf'), lr = get('lr');
+  let delta, vy;
+  if (mode === 'slip') {
+    const aF = get('aF') * D2R, aR = get('aR') * D2R;
+    vy = lr * r - vx * Math.tan(aR);                       // from alpha_r = -atan2(vy - lr r, vx)
+    delta = aF + Math.atan2(vy + lf * r, vx);              // from alpha_f = delta - atan2(vy + lf r, vx)
+  } else {
+    delta = get('delta') * D2R; vy = get('vy');
+  }
+  const vyf = vy + lf * r, vyr = vy - lr * r;
+  const thF = Math.atan2(vyf, vx), thR = Math.atan2(vyr, vx);
+  return { psi, vx, vy, r, lf, lr, delta, vyf, vyr, thF, thR, beta: Math.atan2(vy, vx),
+           aF: delta - thF, aR: -thR };
+}
+function syncUI(s) {
+  const derived = { delta: s.delta * R2D, vy: s.vy, aF: s.aF * R2D, aR: s.aR * R2D };
+  defs.forEach(d => {
+    if (!d.id) return;
+    const off = d.mode && d.mode !== mode;
+    d.row.classList.toggle('off', !!off);
+    $(d.id).disabled = !!off;
+    let v = get(d.id);
+    if (off) { v = derived[d.id]; $(d.id).value = v; }     // thumb clamps if out of range; chip stays exact
+    $('val_' + d.id).textContent = d.fmt(v);
+  });
+}
+
+// ---------- canvas ----------
+const W = 900, H = 660, S = 2.8, LV = 440;    // S: px per (m/s);  LV: visual wheelbase in px (exaggerated)
+const cv = $('cv'), ctx = cv.getContext('2d');
+const dpr = window.devicePixelRatio || 1;
+cv.width = W * dpr; cv.height = H * dpr;
+ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+const P = (x, y) => [W / 2 + x, H / 2 - y];
+const rot = (a, x, y) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+const font = sz => `600 ${sz}px Inter, system-ui, sans-serif`;
+
+function line(x1, y1, x2, y2, color, w, dash, cap) {
+  const a = P(x1, y1), b = P(x2, y2);
+  ctx.beginPath(); ctx.setLineDash(dash || []); ctx.strokeStyle = color; ctx.lineWidth = w || 1; ctx.lineCap = cap || 'butt';
+  ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.setLineDash([]);
+}
+function arrow(x1, y1, x2, y2, color, w) {
+  line(x1, y1, x2, y2, color, w, null, 'round');
+  const ang = Math.atan2(y2 - y1, x2 - x1), h = 12, s = 0.42, t = P(x2, y2);
+  const q1 = P(x2 - h * Math.cos(ang) + h * s * Math.sin(ang), y2 - h * Math.sin(ang) - h * s * Math.cos(ang));
+  const q2 = P(x2 - h * Math.cos(ang) - h * s * Math.sin(ang), y2 - h * Math.sin(ang) + h * s * Math.cos(ang));
+  ctx.beginPath(); ctx.fillStyle = color; ctx.moveTo(t[0], t[1]); ctx.lineTo(q1[0], q1[1]); ctx.lineTo(q2[0], q2[1]); ctx.closePath(); ctx.fill();
+}
+function arc(cx, cy, a1, a2, R, color) {
+  if (Math.abs(a2 - a1) < 1e-4) return;
+  const c = P(cx, cy);
+  ctx.beginPath(); ctx.setLineDash([]); ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.arc(c[0], c[1], R, -a1, -a2, a2 > a1); ctx.stroke();
+}
+function wheel(cx, cy, ang) {
+  const Lw = 58, Ww = 20, h = [Math.cos(ang), Math.sin(ang)], n = [-h[1], h[0]];
+  const pts = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a, b]) =>
+    P(cx + a * Lw / 2 * h[0] + b * Ww / 2 * n[0], cy + a * Lw / 2 * h[1] + b * Ww / 2 * n[1]));
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(p => ctx.lineTo(p[0], p[1])); ctx.closePath();
+  ctx.fillStyle = C.dark; ctx.strokeStyle = C.dark; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.fill(); ctx.stroke();
+}
+
+// ---------- label placement with collision avoidance ----------
+// Labels are queued during drawing, then placed in priority order so none overlap each other,
+// the wheels, or the canvas edge. A displaced label gets a thin leader line back to its anchor.
+let reqs = [], obstacles = [];
+function req(text, ax, ay, dir, dist, color, size, pri) { reqs.push({ text, ax, ay, dir, dist, color, size, pri }); }
+const parts = s => { const m = s.match(/^(.*?)_(.)(.*)$/); return m ? [{ t: m[1] }, { t: m[2], sub: true }, { t: m[3] }] : [{ t: s }]; };
+function measure(ps, size) {
+  let w = 0;
+  ps.forEach(p => { ctx.font = font(p.sub ? size * 0.72 : size); p.w = ctx.measureText(p.t).width; w += p.w; });
+  return w;
+}
+const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+function placeAll() {
+  const placed = [], out = [];
+  reqs.sort((a, b) => a.pri - b.pri).forEach(q => {
+    const ps = parts(q.text), tw = measure(ps, q.size), w = tw + 12, h = q.size + 10;
+    const anchor = P(q.ax, q.ay);
+    const offs = [0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6];
+    let best = null;
+    search:
+    for (let i = 0; i < 18; i++) {
+      const d = q.dist + i * 12;
+      for (const o of offs) {
+        const a = q.dir + o, c = P(q.ax + d * Math.cos(a), q.ay + d * Math.sin(a));
+        const box = { x: c[0] - w / 2, y: c[1] - h / 2, w, h };
+        if (!best) best = { c, box, moved: false };                       // fallback: preferred spot
+        if (box.x < 4 || box.y < 4 || box.x + w > W - 4 || box.y + h > H - 4) continue;
+        if (placed.some(p => hit(p, box)) || obstacles.some(p => hit(p, box))) continue;
+        best = { c, box, moved: i > 0 || o !== 0 }; break search;
+      }
+    }
+    placed.push(best.box);
+    out.push({ ps, tw, size: q.size, color: q.color, c: best.c, anchor: best.moved ? anchor : null });
+  });
+  // draw leaders first, then text on top of everything
+  out.forEach(l => {
+    if (!l.anchor) return;
+    ctx.beginPath(); ctx.setLineDash([2, 3]); ctx.strokeStyle = l.color; ctx.globalAlpha = .6; ctx.lineWidth = 1;
+    ctx.moveTo(l.anchor[0], l.anchor[1]); ctx.lineTo(l.c[0], l.c[1]); ctx.stroke(); ctx.globalAlpha = 1; ctx.setLineDash([]);
+  });
+  out.forEach(l => {
+    let x = l.c[0] - l.tw / 2;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    l.ps.forEach(p => {
+      const sz = p.sub ? l.size * 0.72 : l.size, y = l.c[1] + (p.sub ? l.size * 0.25 : 0);
+      ctx.font = font(sz); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,255,255,.93)'; ctx.strokeText(p.t, x, y);
+      ctx.fillStyle = l.color; ctx.fillText(p.t, x, y); x += p.w;
+    });
+  });
+}
+
+// ---------- one axle ----------
+const RA = 96;   // slip-angle arc radius
+function axle(pos, psi, wheelAng, vxb, vyb, name, slip) {
+  const [px, py] = pos, th = Math.atan2(vyb, vxb), h = [Math.cos(wheelAng), Math.sin(wheelAng)];
+  line(px - 70 * h[0], py - 70 * h[1], px + 190 * h[0], py + 190 * h[1], C.blue, 2, [8, 5]);          // wheel heading
+  const ex = rot(psi, vxb * S, 0), ev = rot(psi, vxb * S, vyb * S);
+  line(px, py, px + ex[0], py + ex[1], 'rgba(22,163,74,.55)', 1.5, [3, 4]);                          // v_x component
+  line(px + ex[0], py + ex[1], px + ev[0], py + ev[1], 'rgba(124,58,237,.75)', 1.5, [3, 4]);        // lateral component
+  arc(px, py, psi + th, wheelAng, RA, C.orange);
+  arrow(px, py, px + ev[0], py + ev[1], C.green, 3.5);
+  wheel(px, py, wheelAng);
+  const c = P(px, py); ctx.beginPath(); ctx.arc(c[0], c[1], 4.5, 0, 7); ctx.fillStyle = '#ef4444'; ctx.fill();
+  obstacles.push({ x: c[0] - 34, y: c[1] - 34, w: 68, h: 68 });
+  // labels
+  const m = Math.abs(wheelAng - (psi + th)) < 1e-4 ? wheelAng : (wheelAng + psi + th) / 2;
+  req(`\u03B1_${name} ${(slip * R2D).toFixed(1)}\u00B0`, px + RA * Math.cos(m), py + RA * Math.sin(m), m, 24, C.orange, 17, 1);
+  req(`V_${name}`, px + ev[0], py + ev[1], psi + th, 20, C.green, 16, 4);
+}
+
+function draw() {
+  const s = compute(); syncUI(s);
+  const { psi, vx, vy, r, lf, lr, delta, vyf, vyr, thF, thR, beta, aF, aR } = s;
+  reqs = []; obstacles = [];
+  ctx.clearRect(0, 0, W, H);
+
+  // grid
+  ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(148,163,184,.18)'; ctx.setLineDash([]);
+  for (let x = 0; x <= W; x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  // world X axis
+  line(-430, 0, 430, 0, 'rgba(100,116,139,.7)', 1.5, [6, 5]);
+  req('X world', 385, 0, Math.PI / 2, 16, C.gray, 14, 6);
+
+  // visual axle positions: CG divides the exaggerated wheelbase in the real l_f : l_r ratio
+  const ratio = lf / (lf + lr);
+  const F = rot(psi, ratio * LV, 0), Rr = rot(psi, -(1 - ratio) * LV, 0);
+
+  // body axis + chassis
+  const a0 = rot(psi, -430, 0), a1 = rot(psi, 430, 0);
+  line(a0[0], a0[1], a1[0], a1[1], 'rgba(124,58,237,.45)', 1.5, [3, 5]);
+  line(Rr[0], Rr[1], F[0], F[1], '#cbd5e1', 12, null, 'round');
+  line(Rr[0], Rr[1], F[0], F[1], '#94a3b8', 3, null, 'round');
+
+  // heading psi at CG
+  const RP = 60;
+  arc(0, 0, 0, psi, RP, C.purple);
+  req(`\u03C8 ${(psi * R2D).toFixed(0)}\u00B0`, RP * Math.cos(psi / 2), RP * Math.sin(psi / 2), psi / 2, 22, C.purple, 16, 3);
+
+  // steer delta at front axle (smaller radius than the slip arc)
+  const RD = 52;
+  arc(F[0], F[1], psi, psi + delta, RD, C.purple);
+  req(`\u03B4 ${(delta * R2D).toFixed(1)}\u00B0`, F[0] + RD * Math.cos(psi + delta / 2), F[1] + RD * Math.sin(psi + delta / 2), psi + delta / 2, 22, C.purple, 16, 2);
+
+  // CG velocity + marker
+  const vcg = rot(psi, vx * S, vy * S);
+  arrow(0, 0, vcg[0], vcg[1], 'rgba(100,116,139,.85)', 2.5);
+  req('V CG', vcg[0], vcg[1], psi + beta, 20, C.gray, 14, 5);
+  const cg = P(0, 0); ctx.beginPath(); ctx.arc(cg[0], cg[1], 7, 0, 7); ctx.fillStyle = C.dark; ctx.fill();
+  ctx.beginPath(); ctx.arc(cg[0], cg[1], 3, 0, 7); ctx.fillStyle = '#fff'; ctx.fill();
+  obstacles.push({ x: cg[0] - 12, y: cg[1] - 12, w: 24, h: 24 });
+  req('CG', 0, 0, -Math.PI / 2, 22, C.dark, 14, 7);
+
+  axle(Rr, psi, psi, vx, vyr, 'r', aR);
+  axle(F, psi, psi + delta, vx, vyf, 'f', aF);
+
+  placeAll();
+
+  // readouts
+  $('sAf').textContent = sgn(aF * R2D, 2, '\u00B0'); $('sAr').textContent = sgn(aR * R2D, 2, '\u00B0');
+  $('sD').textContent = sgn(delta * R2D, 2, '\u00B0'); $('sVy').textContent = sgn(vy, 2, ' m/s');
+  $('sB').textContent = sgn(beta * R2D, 2, '\u00B0'); $('sC').textContent = sgn((psi + beta) * R2D, 2, '\u00B0');
+
+  const d2 = x => (x * R2D).toFixed(2).padStart(7) + ' deg';
+  $('out').textContent =
+`FRONT  v_y,f = v_y + l_f r = ${vy.toFixed(2)} + ${lf.toFixed(2)}*${r.toFixed(2)} = ${vyf.toFixed(3)} m/s
+       theta_f = atan2(${vyf.toFixed(3)}, ${vx.toFixed(2)}) = ${d2(thF)}
+       alpha_f = delta - theta_f = ${d2(delta)} - (${d2(thF)}) = ${d2(aF)}
+
+REAR   v_y,r = v_y - l_r r = ${vy.toFixed(2)} - ${lr.toFixed(2)}*${r.toFixed(2)} = ${vyr.toFixed(3)} m/s
+       theta_r = atan2(${vyr.toFixed(3)}, ${vx.toFixed(2)}) = ${d2(thR)}
+       alpha_r = 0 - theta_r = ${d2(aR)}
+
+CG     beta = atan2(v_y, v_x) = ${d2(beta)},  course = psi + beta = ${d2(psi + beta)}`;
+}
+
+// ---------- events ----------
+const setVal = (id, v) => { $(id).value = v; };
+document.querySelectorAll('input[name=mode]').forEach(el => el.addEventListener('change', () => {
+  const s = compute();                                     // state under the old mode
+  mode = el.value;
+  $('eqInv').style.display = mode === 'slip' ? 'block' : 'none';
+  if (mode === 'slip') { setVal('aF', s.aF * R2D); setVal('aR', s.aR * R2D); }
+  else { setVal('delta', s.delta * R2D); setVal('vy', s.vy); }
+  draw();
+}));
+document.querySelectorAll('input[type=range]').forEach(el => el.addEventListener('input', draw));
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Bicycle Models and MPC: Kinematic vs Dynamic</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{macros:{'\\arraystretch':'1.35'},delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+  :root { --ink:#1d2433; --muted:#5b6577; --line:#d9dee7; --soft:#f4f6fa; --accent:#2f5bd8; --k:#1f6fd8; --d:#c2410c; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background:#fff;
+         line-height: 1.55; max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; overflow-wrap: break-word; }
+  h1 { font-size: 1.7rem; line-height: 1.25; margin: 0 0 .4em; letter-spacing: -.01em; }
+  h2 { font-size: 1.3rem; margin: 2.2em 0 .7em; padding: .35em 0 .35em .6em; border-left: 5px solid var(--accent); background: var(--soft); border-radius: 0 6px 6px 0; }
+  h3 { font-size: 1.08rem; margin: 1.6em 0 .5em; color: var(--accent); }
+  p, li { max-width: 75ch; }
+  ul, ol { padding-left: 1.3em; }
+  code { background: var(--soft); padding: 1px 5px; border-radius: 4px; font-size: .92em; }
+  table { border-collapse: separate !important; border-spacing: 0; width: 100%; margin: 1em 0; border: 1px solid var(--line) !important; border-radius: 8px; overflow: hidden; font-size: .97rem; }
+  th, td { border: none !important; border-bottom: 1px solid var(--line) !important; padding: 10px 12px !important; vertical-align: top; overflow-wrap: anywhere; text-align: left; }
+  tr:last-child > td, tr:last-child > th { border-bottom: none !important; }
+  th { background: #e9eefb; font-weight: 600; }
+  table.cmp td:first-child { background: var(--soft); font-weight: 600; width: 13%; }
+  table.cmp th:nth-child(2) { background: #e3eefc; color: var(--k); }
+  table.cmp th:nth-child(3) { background: #fdeadd; color: var(--d); }
+  tr:nth-child(even) > td:not(:first-child) { background: #fbfcfe; }
+  .katex { font-size: 1.05em; }
+  .katex-display { overflow-x: auto; overflow-y: hidden; margin: .7em 0; padding: 2px 0; }
+  td .katex-display { text-align: left; }
+  td .katex-display > .katex { text-align: left; }
+  body > svg, div > svg:not(.katex svg) { max-width: 100%; height: auto; display: block; margin: 1em auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  .katex svg { display: block; margin: 0; border: 0; border-radius: 0; background: transparent; max-width: none; height: inherit; }
+  @media (max-width: 1000px) {
+    table.cmp, table.cmp tbody, table.cmp tr, table.cmp td, table.cmp th { display: block; width: auto !important; }
+    table.cmp { border: none !important; }
+    table.cmp tr:first-child { display: none; }
+    table.cmp tr { margin-bottom: 14px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    table.cmp td { border-bottom: 1px solid var(--line) !important; padding: 8px 10px !important; background: #fff !important; }
+    table.cmp td:first-child { background: var(--soft) !important; font-weight: 700; width: auto; }
+    table.cmp td[data-label]::before { content: attr(data-label); display: block; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 4px; }
+    table.cmp td[data-label^="Kinematic"]::before { color: var(--k); }
+    table.cmp td[data-label^="Dynamic"]::before { color: var(--d); }
+  }
+  @media (max-width: 500px) { h1 { font-size: 1.4rem; } h2 { font-size: 1.15rem; } }
+</style>
+</head>
+<body>
+
+<h1>Bicycle models and MPC: kinematic vs dynamic</h1>
+
+<h3>Notation</h3>
+<table border="1" cellpadding="6" style="border-collapse:collapse">
+<tr><td>$x, y$ / $X, Y$</td><td>position in world frame (rear axle for kinematic, CG for dynamic)</td>
+    <td>$\psi$</td><td>heading (yaw)</td></tr>
+<tr><td>$v, v_x, v_y$</td><td>speed; body-frame longitudinal / lateral velocity</td>
+    <td>$\omega = \dot\psi$</td><td>yaw rate</td></tr>
+<tr><td>$\delta$</td><td>front steering angle</td>
+    <td>$a$</td><td>longitudinal acceleration</td></tr>
+<tr><td>$L = l_f + l_r$</td><td>wheelbase; CG to front / rear axle</td>
+    <td>$m, I_z$</td><td>mass, yaw inertia</td></tr>
+<tr><td>$C_f, C_r$</td><td>cornering stiffness per axle (N/rad)</td>
+    <td>$\alpha_f, \alpha_r$</td><td>tire slip angles</td></tr>
+<tr><td>$\mu$</td><td>tire-road friction coefficient</td>
+    <td>$T_s, N$</td><td>MPC sample time, horizon length</td></tr>
+</table>
+
+<h2>Part 1. Vehicle models</h2>
+
+<table class="cmp" border="1" cellpadding="8" style="border-collapse:collapse;width:100%">
+<tr>
+  <th style="width:10%">Aspect</th>
+  <th style="width:45%">Kinematic bicycle</th>
+  <th style="width:45%">Dynamic bicycle</th>
+</tr>
+
+<tr>
+  <td><b>Idea</b></td>
+  <td data-label="Kinematic bicycle">Wheels are rigid rails: each wheel's velocity points along its own plane (zero lateral slip). Pure geometry. No mass, no forces.</td>
+  <td data-label="Dynamic bicycle">Tires need a slip angle to make lateral force. Newton-Euler balance for lateral motion and yaw, with tire force as a function of slip.</td>
+</tr>
+
+<tr>
+  <td><b>Reference point</b></td>
+  <td data-label="Kinematic bicycle">Rear axle (simplest) or CG (adds sideslip angle $\beta$).</td>
+  <td data-label="Dynamic bicycle">Center of gravity.</td>
+</tr>
+
+<tr>
+  <td><b>Frame</b></td>
+  <td colspan="2" data-label="Kinematic bicycle and Dynamic bicycle">
+    <b>Both models are shown in the same frame: the world (inertial) frame.</b>
+    Position and heading are in fixed global axes: $(x, y, \psi)$ for the kinematic model and $(X, Y, \psi)$ for the dynamic model, with $\psi$ measured from the global $x$-axis. For the dynamic model, $v_x$, $v_y$, $\omega$ and the force balance are in the car's body axes.
+    The same two models written in the path (Frenet) frame are in <a href="#part4">Part 4</a>, and the MPC in Part 2 uses that path frame for both.
+  </td>
+</tr>
+
+<tr>
+  <td><b>States and inputs</b></td>
+  <td data-label="Kinematic bicycle">States $[x,\ y,\ \psi,\ v]$<br>Inputs $[a,\ \delta]$</td>
+  <td data-label="Dynamic bicycle">States $[X,\ Y,\ \psi,\ v_y,\ \omega]$ with $v_x$ held constant (or added as a state)<br>Inputs $[\delta]$, optionally $a_x$</td>
+</tr>
+
+<tr>
+  <td><b>Equations of motion</b></td>
+  <td data-label="Kinematic bicycle">
+    Rear-axle reference:
+    $$\begin{aligned}
+    \dot x &= v\cos\psi\\[1mm]
+    \dot y &= v\sin\psi\\[1mm]
+    \dot\psi &= \frac{v}{L}\tan\delta\\[1mm]
+    \dot v &= a
+    \end{aligned}$$
+    CG reference (same motion, different point):
+    $$\begin{aligned}
+    \beta &= \arctan\!\left(\frac{l_r}{L}\tan\delta\right)\\[1mm]
+    \dot x &= v\cos(\psi+\beta)\\[1mm]
+    \dot y &= v\sin(\psi+\beta)\\[1mm]
+    \dot\psi &= \frac{v\cos\beta}{L}\tan\delta = \frac{v}{l_r}\sin\beta
+    \end{aligned}$$
+  </td>
+  <td data-label="Dynamic bicycle">
+    Position kinematics:
+    $$\begin{aligned}
+    \dot X &= v_x\cos\psi - v_y\sin\psi\\[1mm]
+    \dot Y &= v_x\sin\psi + v_y\cos\psi\\[1mm]
+    \dot\psi &= \omega
+    \end{aligned}$$
+    Lateral and yaw dynamics:
+    $$\begin{aligned}
+    m(\dot v_y + v_x\omega) &= F_{yf}\cos\delta + F_{yr}\\[1mm]
+    I_z\,\dot\omega &= l_f F_{yf}\cos\delta - l_r F_{yr}
+    \end{aligned}$$
+    Longitudinal (if $v_x$ is a state, drive force on the rear axle):
+    $$\begin{aligned}
+    m(\dot v_x - v_y\omega) &= F_{xr} - F_{yf}\sin\delta
+    \end{aligned}$$
+  </td>
+</tr>
+
+<tr>
+  <td><b>Tire model</b></td>
+  <td data-label="Kinematic bicycle">None. Slip angles are zero by assumption:
+    $$\begin{aligned}
+    \alpha_f &= \alpha_r = 0
+    \end{aligned}$$
+    so no lateral tire force exists, and no force limit either.</td>
+  <td data-label="Dynamic bicycle">
+    Slip angles:
+    $$\begin{aligned}
+    \alpha_f &= \delta - \arctan\frac{v_y + l_f\omega}{v_x}\\[1mm]
+    \alpha_r &= -\arctan\frac{v_y - l_r\omega}{v_x}
+    \end{aligned}$$
+    Sign convention: $l_f, l_r$ are positive distances from the CG to each axle, and slip angles are defined so a positive slip angle gives a positive (leftward) lateral force. $C_f, C_r$ are per axle; a per-tire stiffness $C_\alpha$ (as in Rajamani) gives $C = 2C_\alpha$.<br>
+    Linear tire, one equation per axle:
+    $$\begin{aligned}
+    F_{yf} &= C_f\,\alpha_f\\
+    F_{yr} &= C_r\,\alpha_r
+    \end{aligned}$$
+    Saturating tire (used in the simulation):
+    $$\begin{aligned}
+    F_y &= F_{max}\tanh\!\left(\frac{C\alpha}{F_{max}}\right)\\[1mm]
+    F_{max} &= \mu F_z
+    \end{aligned}$$
+    Pacejka magic formula:
+    $${\small \begin{aligned}
+    F_y &= D\sin\!\big(C_p\arctan(B\alpha - E(B\alpha - \arctan B\alpha))\big)\\[1mm]
+    D &= \mu F_z
+    \end{aligned}}$$
+    Static axle loads:
+    $$\begin{aligned}
+    F_{zf} &= \dfrac{m g\, l_r}{L}\\[1mm]
+    F_{zr} &= \dfrac{m g\, l_f}{L}
+    \end{aligned}$$
+  </td>
+</tr>
+
+<tr>
+  <td><b>Linear state-space form</b></td>
+  <td data-label="Kinematic bicycle">None. The model is nonlinear in $\psi$ and $\delta$. It is linearized about a reference for control (see MPC part).</td>
+  <td data-label="Dynamic bicycle">
+    Small angles, linear tires, with the shorthand
+    $$\begin{aligned}
+    c_1 &= C_f + C_r\\[1mm]
+    c_2 &= l_f C_f - l_r C_r\\[1mm]
+    c_3 &= l_f^2 C_f + l_r^2 C_r
+    \end{aligned}$$
+    the dynamics are:
+    $$\begin{aligned}
+    \begin{bmatrix}\dot v_y\\ \dot\omega\end{bmatrix} &= \begin{bmatrix} -\dfrac{c_1}{m v_x} & -\dfrac{c_2}{m v_x} - v_x\\[2mm] -\dfrac{c_2}{I_z v_x} & -\dfrac{c_3}{I_z v_x} \end{bmatrix} \begin{bmatrix}v_y\\ \omega\end{bmatrix}\\
+    &\quad + \begin{bmatrix}\dfrac{C_f}{m}\\[2mm] \dfrac{l_f C_f}{I_z}\end{bmatrix}\delta
+    \end{aligned}$$
+    Note the $1/v_x$ terms: the model is singular at $v_x \to 0$.<br>
+    Signs follow the slip-angle convention above. With it, $c_2$ and the stiffness convention are
+    $$\begin{aligned}
+    c_2 &= l_f C_f - l_r C_r\\[1mm]
+    C &= 2C_\alpha
+    \end{aligned}$$
+    which matches Rajamani (his $C_\alpha$ is per tire, $C$ here is per axle). Texts that treat $l_r$ as a signed (negative) coordinate write the same term with a plus sign. The equations are identical.
+  </td>
+</tr>
+
+<tr>
+  <td><b>Steady-state cornering</b></td>
+  <td data-label="Kinematic bicycle">
+    $$\begin{aligned}
+    R &= \frac{L}{\tan\delta}\\[1mm]
+    \omega &= \frac{v\tan\delta}{L}\\[1mm]
+    a_y &= \frac{v^2\tan\delta}{L}
+    \end{aligned}$$
+    Radius is independent of speed.
+  </td>
+  <td data-label="Dynamic bicycle">
+    $$\begin{aligned}
+    R &= \frac{L + K v_x^2}{\delta}\\[1mm]
+    \omega &= \frac{v_x\,\delta}{L + K v_x^2}
+    \end{aligned}$$
+    $$\begin{aligned}
+    K &= \frac{m}{L}\left(\frac{l_r}{C_f} - \frac{l_f}{C_r}\right)\quad\text{(understeer gradient)}
+    \end{aligned}$$
+    $K>0$: understeer. Characteristic speed:
+    $$\begin{aligned}
+    v_{ch} &= \sqrt{L/K}
+    \end{aligned}$$
+    $K<0$: oversteer. Critical speed, above which the car is unstable:
+    $$\begin{aligned}
+    v_{crit} &= \sqrt{-L/K}
+    \end{aligned}$$
+    $K=0$: neutral.
+  </td>
+</tr>
+
+<tr>
+  <td><b>Sideslip at CG</b></td>
+  <td data-label="Kinematic bicycle">$$\begin{aligned}
+    \beta &= \arctan\!\left(\frac{l_r}{L}\tan\delta\right)
+    \end{aligned}$$ Purely geometric.</td>
+  <td data-label="Dynamic bicycle">Steady state: $$\begin{aligned}
+    \beta &\approx \frac{1}{R}\left(l_r - \frac{m\,l_f}{C_r L}\,v_x^2\right)
+    \end{aligned}$$ Rear slip angle makes it shrink, and it changes sign at high speed.</td>
+</tr>
+
+<tr>
+  <td><b>Transient response</b></td>
+  <td data-label="Kinematic bicycle">Yaw rate responds instantly to $\delta$ (algebraic). No lag, no overshoot.</td>
+  <td data-label="Dynamic bicycle">Second-order lag from the eigenvalues of the $2\times2$ matrix above. Yaw rate builds up over a fraction of a second, and can overshoot.</td>
+</tr>
+
+<tr>
+  <td><b>Parameters needed</b></td>
+  <td data-label="Kinematic bicycle">$L$ (and $l_r$ if referenced at CG). Nothing else.</td>
+  <td data-label="Dynamic bicycle">$m,\ I_z,\ l_f,\ l_r,\ C_f,\ C_r$, and $\mu$ for saturation. Needs identification.</td>
+</tr>
+
+<tr>
+  <td><b>Valid when</b></td>
+  <td data-label="Kinematic bicycle">Tire slip angles are small, roughly under 1 to 2 degrees (a rule of thumb). In steady state
+    $$\begin{aligned}
+    \alpha_f &= \dfrac{m\,l_r\,a_y}{L\,C_f}\\[1mm]
+    \alpha_r &= \dfrac{m\,l_f\,a_y}{L\,C_r}\\[1mm]
+    a_y &= \dfrac{v^2\tan\delta}{L}
+    \end{aligned}$$
+    so the real limit is lateral acceleration, not speed alone: a tight turn at 5 m/s can exceed it, while a gentle curve at 20 m/s may not. A commonly quoted bound is $a_y \lesssim 0.5\,\mu g$ (Polack et al., 2017).</td>
+  <td data-label="Dynamic bicycle">Moderate to high speed and lateral acceleration. Linear tires hold up to roughly 0.3 to 0.4 g on dry road. Use a saturating tire beyond that. Combined braking and cornering needs a friction-circle tire model.</td>
+</tr>
+
+<tr>
+  <td><b>Breaks down when</b></td>
+  <td data-label="Kinematic bicycle">Speed and lateral acceleration rise: it cannot show understeer, slip, or tire saturation, so it is optimistic about what the car can do.</td>
+  <td data-label="Dynamic bicycle">$v_x \to 0$ (division by $v_x$), or when load transfer, roll, and suspension matter (bicycle model ignores them).</td>
+</tr>
+</table>
+
+<h2>Part 2. MPC formulations</h2>
+
+<div>
+Both use the same receding-horizon idea: at each step solve for the best input sequence over $N$ steps, apply the first input, repeat.
+Both columns are written in the same path (Frenet) frame, so they can be compared row by row: $e_y$ is the lateral distance to the path, $e_\psi$ is the heading error relative to the path tangent, and the path enters through its curvature $\kappa$. The world-frame versions, and how the two frames differ, are in Part 4.
+Kinematic MPC plans <i>where</i> the car goes and relies on constraints to stay feasible.
+Dynamic MPC also models <i>how much force the tires can make</i>.
+</div>
+
+<table class="cmp" border="1" cellpadding="8" style="border-collapse:collapse;width:100%">
+<tr>
+  <th style="width:10%">Aspect</th>
+  <th style="width:45%">Kinematic MPC</th>
+  <th style="width:45%">Dynamic MPC</th>
+</tr>
+
+<tr>
+  <td><b>Definition of $e_y$ and $e_\psi$</b></td>
+  <td data-label="Kinematic MPC">
+    Let $(x_p, y_p)$ be the point on the path closest to the rear axle $(x, y)$, at arc length $s^*$, with path heading $\psi_p$ and curvature $\kappa = d\psi_p/ds$ there. Then
+    $$\begin{aligned}
+    e_y &= -(x - x_p)\sin\psi_p + (y - y_p)\cos\psi_p\\[1mm]
+    e_\psi &= \psi - \psi_p\quad(\text{wrapped to } [-\pi, \pi])
+    \end{aligned}$$
+    $e_y$ is the signed perpendicular distance from the path (positive to the left of the driving direction). $e_\psi$ is the heading relative to the path tangent. Only the current values come from this projection. Over the horizon, the model equations below predict them.
+  </td>
+  <td data-label="Dynamic MPC">
+    The same two definitions, with the rear axle $(x, y)$ replaced by the CG $(X, Y)$:
+    $$\begin{aligned}
+    e_y &= -(X - x_p)\sin\psi_p + (Y - y_p)\cos\psi_p\\[1mm]
+    e_\psi &= \psi - \psi_p\quad(\text{wrapped to } [-\pi, \pi])
+    \end{aligned}$$
+    Model (a) also needs the rates, computed from the measured velocities:
+    $$\begin{aligned}
+    \dot e_y &= v_y\cos e_\psi + v_x\sin e_\psi \approx v_y + v_x\,e_\psi\\[1mm]
+    \dot e_\psi &= \omega - v_x\kappa
+    \end{aligned}$$
+    Model (b) starts from $q_0 = [s^*,\ e_y,\ e_\psi,\ v_x,\ v_y,\ \omega]^\top$.
+  </td>
+</tr>
+
+<tr>
+  <td><b>Prediction model</b></td>
+  <td data-label="Kinematic MPC">
+    Path (Frenet) frame. States $e = [e_y,\ e_\psi]^\top$, input $\delta$. Speed $v$ and path curvature $\kappa$ are known from the reference. Simplified model (small $e_\psi$, small $\delta$, $\kappa e_y \ll 1$), one equation per state:
+    $$\begin{aligned}
+    \dot e_y &= v\,e_\psi\\[1mm]
+    \dot e_\psi &= \frac{v}{L}\,\delta - \dot\psi_{des}\\[1mm]
+    \dot\psi_{des} &= v\kappa
+    \end{aligned}$$
+    Reading them: heading error moves you sideways at rate $v$; the yaw rate $\frac{v}{L}\delta$ minus the rate at which the path turns changes the heading error.
+    <br><br>
+    Exact form (adds the path progress $s$):
+    $$\begin{aligned}
+    \dot s &= \frac{v\cos e_\psi}{1 - \kappa e_y}\\[1mm]
+    \dot e_y &= v\sin e_\psi\\[1mm]
+    \dot e_\psi &= \frac{v}{L}\tan\delta - \kappa\,\dot s
+    \end{aligned}$$
+    Matrix form of the simplified model:
+    $$\begin{aligned}
+    \dot e &= A\,e + B\,\delta + B_2\,\dot\psi_{des}\\[1mm]
+    A &= \begin{bmatrix}0 & v\\ 0 & 0\end{bmatrix}\\[1mm]
+    B &= \begin{bmatrix}0\\ \dfrac{v}{L}\end{bmatrix}\\[1mm]
+    B_2 &= \begin{bmatrix}0\\ -1\end{bmatrix}
+    \end{aligned}$$
+  </td>
+  <td data-label="Dynamic MPC">
+    <b>(a) Lane-keeping error model (LTV)</b>, from Rajamani. State is lateral error, heading error, and their rates, relative to a path with curvature $\kappa$:
+    $$\begin{aligned}
+    e &= [e_y,\ \dot e_y,\ e_\psi,\ \dot e_\psi]^\top\\[1mm]
+    u &= \delta\\[1mm]
+    \dot\psi_{des} &= v_x\kappa
+    \end{aligned}$$
+    The error equations follow from these relations (constant $v_x$ and curvature), with the linear-tire dynamics of Part 1:
+    $$\begin{aligned}
+    \ddot e_y &= \dot v_y + v_x\dot e_\psi\\[1mm]
+    \ddot e_\psi &= \dot\omega\\[1mm]
+    v_y &= \dot e_y - v_x e_\psi\\[1mm]
+    \omega &= \dot e_\psi + \dot\psi_{des}
+    \end{aligned}$$
+    One equation per error state:
+    $$\begin{aligned}
+    \tfrac{d}{dt}(e_y) &= \dot e_y\\[1mm]
+    \tfrac{d}{dt}(\dot e_y) &= -\frac{c_1}{m v_x}\dot e_y + \frac{c_1}{m}e_\psi - \frac{c_2}{m v_x}\dot e_\psi + \frac{C_f}{m}\delta\\
+    &\quad - \Big(\frac{c_2}{m v_x} + v_x\Big)\dot\psi_{des}\\[1mm]
+    \tfrac{d}{dt}(e_\psi) &= \dot e_\psi\\[1mm]
+    \tfrac{d}{dt}(\dot e_\psi) &= -\frac{c_2}{I_z v_x}\dot e_y + \frac{c_2}{I_z}e_\psi - \frac{c_3}{I_z v_x}\dot e_\psi + \frac{l_f C_f}{I_z}\delta\\
+    &\quad - \frac{c_3}{I_z v_x}\dot\psi_{des}
+    \end{aligned}$$
+    Matrix form:
+    $$\begin{aligned}
+    \dot e &= A\,e + B_1\,\delta + B_2\,\dot\psi_{des}
+    \end{aligned}$$
+    $$\begin{aligned}
+    A &= \begin{bmatrix} 0 & 1 & 0 & 0\\ 0 & -\dfrac{c_1}{m v_x} & \dfrac{c_1}{m} & -\dfrac{c_2}{m v_x}\\ 0 & 0 & 0 & 1\\ 0 & -\dfrac{c_2}{I_z v_x} & \dfrac{c_2}{I_z} & -\dfrac{c_3}{I_z v_x} \end{bmatrix}
+    \end{aligned}$$
+    $$\begin{aligned}
+    B_1 &= \begin{bmatrix}0\\ \dfrac{C_f}{m}\\ 0\\ \dfrac{l_f C_f}{I_z}\end{bmatrix}\\[1mm]
+    B_2 &= \begin{bmatrix}0\\ -\dfrac{c_2}{m v_x} - v_x\\ 0\\ -\dfrac{c_3}{I_z v_x}\end{bmatrix}
+    \end{aligned}$$
+    with $c_1, c_2, c_3$ as defined in Part 1.
+    <br><br>
+    <b>(b) Full nonlinear model (NMPC)</b>, in the same path frame:
+    States $q = [s,\ e_y,\ e_\psi,\ v_x,\ v_y,\ \omega]^\top$, inputs $[a_x,\ \delta]$. One equation per state:
+    $$\begin{aligned}
+    \dot s &= \frac{v_x\cos e_\psi - v_y\sin e_\psi}{1 - \kappa e_y}\\[1mm]
+    \dot e_y &= v_x\sin e_\psi + v_y\cos e_\psi\\[1mm]
+    \dot e_\psi &= \omega - \kappa\,\dot s\\[1mm]
+    \dot v_x &= a_x + v_y\,\omega - \frac{F_{yf}\sin\delta}{m}\\[1mm]
+    \dot v_y &= \frac{F_{yf}\cos\delta + F_{yr}}{m} - v_x\,\omega\\[1mm]
+    \dot\omega &= \frac{l_f F_{yf}\cos\delta - l_r F_{yr}}{I_z}
+    \end{aligned}$$
+    with
+    $$\begin{aligned}
+    a_x &= F_{xr}/m\\[1mm]
+    \kappa &= \kappa(s)
+    \end{aligned}$$
+    and $F_{yf}, F_{yr}$ from the slip angles and the saturating or Pacejka tire model in Part 1. The last three equations are the same body-frame force balance as in the world frame. Setting
+    $$\begin{aligned}
+    v_y &= 0\\[1mm]
+    \omega &= \tfrac{v}{L}\tan\delta
+    \end{aligned}$$
+    reduces the model to the kinematic exact form.
+  </td>
+</tr>
+
+<tr>
+  <td><b>Derivation of $\dot e_y$ and $\dot e_\psi$</b></td>
+  <td data-label="Kinematic MPC">
+    <b>Setup.</b> The error is measured to the closest path point, whose position and heading move with the arc length $s$:
+    $$\begin{aligned}
+    \dot x_p &= \dot s\cos\psi_p\\[1mm]
+    \dot y_p &= \dot s\sin\psi_p\\[1mm]
+    \dot\psi_p &= \kappa\,\dot s
+    \end{aligned}$$
+    The closest point means the offset vector is perpendicular to the path tangent, so the along-path offset is zero at every instant:
+    $$(x - x_p)\cos\psi_p + (y - y_p)\sin\psi_p = 0$$
+    <b>Lateral error $e_y$.</b> Differentiate the definition:
+    $$\begin{aligned}
+    e_y &= -(x - x_p)\sin\psi_p + (y - y_p)\cos\psi_p\\[1mm]
+    \dot e_y &= -(\dot x - \dot x_p)\sin\psi_p + (\dot y - \dot y_p)\cos\psi_p\\
+    &\quad - \dot\psi_p\big[(x - x_p)\cos\psi_p + (y - y_p)\sin\psi_p\big]
+    \end{aligned}$$
+    The last bracket is the along-path offset, which is zero. The path-point terms cancel:
+    $$\begin{aligned}
+    \dot x_p\sin\psi_p - \dot y_p\cos\psi_p &= \dot s\sin\psi_p\cos\psi_p\\
+    &\quad - \dot s\sin\psi_p\cos\psi_p\\
+    &= 0
+    \end{aligned}$$
+    What remains is the car's velocity component perpendicular to the path:
+    $$\dot e_y = -\dot x\sin\psi_p + \dot y\cos\psi_p$$
+    Insert the kinematic model $\dot x = v\cos\psi$, $\dot y = v\sin\psi$:
+    $$\begin{aligned}
+    \dot e_y &= v(\sin\psi\cos\psi_p - \cos\psi\sin\psi_p)\\[1mm]
+    &= v\sin(\psi - \psi_p)\\[1mm]
+    &= v\sin e_\psi\\[1mm]
+    &\approx v\,e_\psi
+    \end{aligned}$$
+    The last step is the small-angle simplification.
+    <br><br>
+    <b>Heading error $e_\psi$.</b> Differentiate $e_\psi = \psi - \psi_p$:
+    $$\begin{aligned}
+    \dot e_\psi &= \dot\psi - \dot\psi_p\\[1mm]
+    &= \frac{v}{L}\tan\delta - \kappa\,\dot s
+    \end{aligned}$$
+    Path progress: differentiate the zero along-path offset to get
+    $$\dot s = \frac{\dot x\cos\psi_p + \dot y\sin\psi_p}{1 - \kappa e_y} = \frac{v\cos e_\psi}{1 - \kappa e_y}$$
+    For $e_\psi$ small and $\kappa e_y \ll 1$ this gives $\dot s \approx v$, so
+    $$\begin{aligned}
+    \dot e_\psi &\approx \frac{v}{L}\delta - v\kappa\\[1mm]
+    &= \frac{v}{L}\delta - \dot\psi_{des}
+    \end{aligned}$$
+  </td>
+  <td data-label="Dynamic MPC">
+    <b>Same steps, different velocity.</b> The setup, the zero along-path offset and the result
+    $$\dot e_y = -\dot X\sin\psi_p + \dot Y\cos\psi_p$$
+    are identical, with the CG $(X, Y)$ in place of the rear axle. Only the world velocity changes. Insert the dynamic model:
+    $$\begin{aligned}
+    \dot X &= v_x\cos\psi - v_y\sin\psi\\[1mm]
+    \dot Y &= v_x\sin\psi + v_y\cos\psi
+    \end{aligned}$$
+    <b>Lateral error $e_y$.</b>
+    $$\begin{aligned}
+    \dot e_y &= v_x\sin(\psi - \psi_p) + v_y\cos(\psi - \psi_p)\\[1mm]
+    &= v_x\sin e_\psi + v_y\cos e_\psi\\[1mm]
+    &\approx v_x\,e_\psi + v_y
+    \end{aligned}$$
+    It has one more term than the kinematic model, because the car also slides sideways at $v_y$. This is the equation used in model (b).
+    <br><br>
+    <b>Heading error $e_\psi$.</b> The yaw rate is now a state $\omega$, not a function of $\delta$:
+    $$\begin{aligned}
+    \dot e_\psi &= \dot\psi - \dot\psi_p\\[1mm]
+    &= \omega - \kappa\,\dot s
+    \end{aligned}$$
+    With $\dot s = \dfrac{v_x\cos e_\psi - v_y\sin e_\psi}{1 - \kappa e_y} \approx v_x$:
+    $$\dot e_\psi \approx \omega - v_x\kappa = \omega - \dot\psi_{des}$$
+    <b>Model (a): second derivatives.</b> Model (a) uses $\dot e_y$ as a state, so it needs $\ddot e_y$. With $v_x$ constant and $e_\psi$ small, differentiate $\dot e_y = v_y + v_x e_\psi$:
+    $$\begin{aligned}
+    \ddot e_y &= \dot v_y + v_x\dot e_\psi\\[1mm]
+    \ddot e_\psi &= \dot\omega
+    \end{aligned}$$
+    The second line uses that $\dot\psi_{des} = v_x\kappa$ is constant, so $\ddot e_\psi = \dot\omega$. Then $\dot v_y$ and $\dot\omega$ come from the force balance of Part 1 (linear tires), with
+    $$\begin{aligned}
+    v_y &= \dot e_y - v_x e_\psi\\[1mm]
+    \omega &= \dot e_\psi + \dot\psi_{des}
+    \end{aligned}$$
+    Substituting these gives the four equations listed above.
+  </td>
+</tr>
+
+<tr>
+  <td><b>Linearization and discretization</b></td>
+  <td data-label="Kinematic MPC">
+    The simplified model is already linear in $(e, \delta, \dot\psi_{des})$, so no linearization is needed. It is time-varying only through $v$ (LTV). Since $A^2 = 0$, the zero-order-hold discretization is exact and short:
+    $$\begin{aligned}
+    A_d &= \begin{bmatrix}1 & vT_s\\ 0 & 1\end{bmatrix}\\[1mm]
+    B_d &= \begin{bmatrix}\dfrac{v^2T_s^2}{2L}\\[2mm] \dfrac{vT_s}{L}\end{bmatrix}\\[1mm]
+    E_d &= \begin{bmatrix}-\dfrac{vT_s^2}{2}\\[2mm] -T_s\end{bmatrix}
+    \end{aligned}$$
+    $$\begin{aligned}
+    e_{k+1} &= A_d\,e_k + B_d\,\delta_k + E_d\,\dot\psi_{des,k}
+    \end{aligned}$$
+    One equation per state:
+    $$\begin{aligned}
+    e_{y,k+1} &= e_{y,k} + vT_s\,e_{\psi,k} + \frac{v^2T_s^2}{2L}\,\delta_k\\
+    &\quad - \frac{vT_s^2}{2}\,\dot\psi_{des,k}\\[1mm]
+    e_{\psi,k+1} &= e_{\psi,k} + \frac{vT_s}{L}\,\delta_k - T_s\,\dot\psi_{des,k}
+    \end{aligned}$$
+    Use $v_k$ and $\kappa_k$ from the reference at each step. For the exact form, linearize about
+    $$\begin{aligned}
+    e &= 0\\[1mm]
+    \delta_{ref} &= \arctan(L\kappa)
+    \end{aligned}$$
+  </td>
+  <td data-label="Dynamic MPC">
+    <b>(a)</b> $A, B_1, B_2$ depend on $v_x$, so the model is LTV along the predicted speed profile. Discretize each step with a zero-order hold using the augmented matrix exponential (A is singular, so do not invert it):
+    $$\begin{aligned}
+    &\exp\!\left(\begin{bmatrix}A & B_1 & B_2\\ 0 & 0 & 0\\ 0 & 0 & 0\end{bmatrix}T_s\right)\\
+    &= \begin{bmatrix}A_d & B_d & E_d\\ 0 & I & 0\\ 0 & 0 & I\end{bmatrix}
+    \end{aligned}$$
+    $$\begin{aligned}
+    e_{k+1} &= A_d\,e_k + B_d\,\delta_k + E_d\,\dot\psi_{des,k}
+    \end{aligned}$$
+    <b>(b)</b> Write the six equations as
+    $$\begin{aligned}
+    \dot q &= f(q, u)
+    \end{aligned}$$
+    About the previous solution (SQP or real-time iteration), define the deviations
+    $$\begin{aligned}
+    \tilde q &= q - q_{prev}\\[1mm]
+    \tilde u &= u - u_{prev}
+    \end{aligned}$$
+    They obey
+    $$\begin{aligned}
+    \dot{\tilde q} &\approx A\,\tilde q + B\,\tilde u
+    \end{aligned}$$
+    with
+    $$\begin{aligned}
+    A &= \partial f/\partial q\\[1mm]
+    B &= \partial f/\partial u
+    \end{aligned}$$
+    computed numerically or by automatic differentiation. Or solve the nonlinear program directly.
+  </td>
+</tr>
+
+<tr>
+  <td><b>Cost</b></td>
+  <td data-label="Kinematic MPC">
+    Regulate errors to zero, penalize steering and steering rate (same form as the dynamic model):
+    $$\begin{aligned}
+    J &= \sum_{k=0}^{N-1}\ell_k + e_N^\top P\,e_N\\[1mm]
+    \ell_k &= e_k^\top Q\,e_k + R\,\delta_k^2 + R_\Delta(\delta_k - \delta_{k-1})^2
+    \end{aligned}$$
+    with $Q = \mathrm{diag}(q_y, q_\psi)$. Optionally penalize $R\,(\delta_k - L\kappa_k)^2$ instead of $R\,\delta_k^2$, so the curvature feedforward $L\kappa$ costs nothing.
+  </td>
+  <td data-label="Dynamic MPC">
+    <b>(a)</b> Regulate errors to zero:
+    $$\begin{aligned}
+    J &= \sum_{k=0}^{N-1}\ell_k + e_N^\top P\,e_N\\[1mm]
+    \ell_k &= e_k^\top Q\,e_k + R\,\delta_k^2 + R_\Delta(\delta_k - \delta_{k-1})^2
+    \end{aligned}$$
+    $P$ from the discrete Riccati equation for the frozen $(A_d, B_d)$ gives a stabilizing terminal cost. Typically weight $e_y$ and $e_\psi$ most.
+    <br><br>
+    <b>(b)</b> Same form as the cost above on $e_y$ and $e_\psi$, plus speed tracking $(v_x - v_{ref})^2$ since $v_x$ is a state, and optional penalties on sideslip $v_y/v_x$ and yaw rate.
+  </td>
+</tr>
+
+<tr>
+  <td><b>Constraints</b></td>
+  <td data-label="Kinematic MPC">
+    $$\begin{aligned}
+    \delta_{min} \le \delta_k &\le \delta_{max}\\[1mm]
+    |\delta_k - \delta_{k-1}| &\le \dot\delta_{max}\,T_s\\[1mm]
+    |e_{y,k}| &\le e_{y,max}\quad\text{(lane bound)}
+    \end{aligned}$$
+    The kinematic model has no tire limit, so add a lateral acceleration limit as a proxy:
+    $$\begin{aligned}
+    \left|\frac{v_k^2\tan\delta_k}{L}\right| &\le a_{y,max}\ (\approx 0.5\,\mu g)\\[1mm]
+    \Rightarrow\ |\delta_k| &\le \arctan\frac{a_{y,max}L}{v_k^2}
+    \end{aligned}$$
+    That is a speed-dependent steering bound, which is linear in $\delta$ once $v_k$ is taken from the reference.
+  </td>
+  <td data-label="Dynamic MPC">
+    Same actuator limits and lane bound:
+    $$\begin{aligned}
+    |\delta| &\le \delta_{max}\\[1mm]
+    |\dot\delta| &\le \dot\delta_{max}\\[1mm]
+    |e_y| &\le e_{y,max}
+    \end{aligned}$$
+    Plus tire-based limits that the kinematic model cannot express.
+    <br><br>
+    Slip-angle bound, linear in $(e, \delta, \dot\psi_{des})$ for model (a), using the relations
+    $$\begin{aligned}
+    v_y &= \dot e_y - v_x e_\psi\\[1mm]
+    \omega &= \dot e_\psi + \dot\psi_{des}
+    \end{aligned}$$
+    which give the slip angles:
+    $$\begin{aligned}
+    \alpha_f &= \delta - \frac{\dot e_y - v_x e_\psi + l_f\dot e_\psi + l_f\dot\psi_{des}}{v_x}\\[1mm]
+    \alpha_r &= -\frac{\dot e_y - v_x e_\psi - l_r\dot e_\psi - l_r\dot\psi_{des}}{v_x}
+    \end{aligned}$$
+    $$\begin{aligned}
+    |\alpha_f| &\le \frac{\mu F_{zf}}{C_f}\\[1mm]
+    |\alpha_r| &\le \frac{\mu F_{zr}}{C_r}
+    \end{aligned}$$
+    For model (b), the friction-circle constraint and a sideslip bound:
+    $$\begin{aligned}
+    F_x^2 + F_y^2 &\le (\mu F_z)^2\\[1mm]
+    |v_y/v_x| &\le \beta_{max}
+    \end{aligned}$$
+  </td>
+</tr>
+
+<tr>
+  <td><b>Solver form</b></td>
+  <td data-label="Kinematic MPC">The simplified model gives a convex QP directly: 2 states, 1 input, linear constraints, very small and fast. The exact model is nonlinear: linearize about the reference or solve it as an NLP.</td>
+  <td data-label="Dynamic MPC">(a) is a convex QP with linear constraints. (b) is an NLP, solved with SQP or real-time iteration (for example acados or CasADi with IPOPT).</td>
+</tr>
+
+<tr>
+  <td><b>Typical settings</b></td>
+  <td data-label="Kinematic MPC">$T_s = 0.05$ to $0.1$ s<br>$N = 10$ to $30$ (1 to 3 s horizon)<br>Cheap enough for embedded targets.</td>
+  <td data-label="Dynamic MPC">Same $T_s$ and $N$ ranges, but more expensive, especially the NLP. Long horizons matter because tire dynamics are slow.</td>
+</tr>
+
+<tr>
+  <td><b>Strengths</b></td>
+  <td data-label="Kinematic MPC">Few parameters and only two states. Robust and well conditioned: no division by speed. Natural for lane centering and path following, and the lane bound is a simple linear limit on $e_y$.</td>
+  <td data-label="Dynamic MPC">Captures understeer, transient lag, and tire limits. Can plan near the friction limit, which is what racing and emergency maneuvers need.</td>
+</tr>
+
+<tr>
+  <td><b>Pitfalls</b></td>
+  <td data-label="Kinematic MPC">Over-optimistic at speed: it will plan turns the tires cannot deliver unless the lateral acceleration limit is tuned conservatively. No transient lag, so it can command steering the car responds to more slowly than predicted. Controls lateral position only: speed comes from a separate controller (or use the world-frame version with $v$ as a state). At low speed the time-domain model loses controllability: for the $A$ and $B$ above, $[B,\ AB]$ has determinant $-v^3/L^2$, so a lateral error cannot be corrected without moving forward (a stationary car cannot steer sideways). Per meter of travel the authority is unchanged:
+    $$\begin{aligned}
+    \frac{de_y}{ds} &= e_\psi\\[1mm]
+    \frac{de_\psi}{ds} &= \frac{\delta}{L} - \kappa
+    \end{aligned}$$
+    so at low speed use a distance-based horizon or a minimum $v$ in the model.</td>
+  <td data-label="Dynamic MPC">Needs identified $C_f, C_r, I_z, \mu$, and $\mu$ is uncertain. Singular at low $v_x$: blend or switch to the kinematic model below a few m/s. Linear tire is wrong near saturation.</td>
+</tr>
+</table>
+
+<h2>Part 3. Shared details</h2>
+
+<h3>Condensed QP (either LTV model)</h3>
+<div>
+Stack the tracking errors and inputs (or input deviations) over the horizon, with $e_0$ the current error:
+$$\begin{aligned}
+    E &= [e_1; \dots; e_N]\\[1mm]
+    U &= [u_0; \dots; u_{N-1}]
+    \end{aligned}$$
+The prediction over the horizon is:
+$$\begin{aligned}
+    E &= \Phi\,e_0 + \Gamma\,U + \Xi\,D
+    \end{aligned}$$
+where $\Phi$ stacks powers of $A_k$, $\Gamma$ is block lower-triangular in $B_k$, and $D$ collects feedforward or disturbance terms (for example $\dot\psi_{des}$).
+Substituting into the cost gives
+$$\begin{aligned}
+    &\min_U\ \tfrac12 U^\top H\,U + f^\top U\\[1mm]
+    &\text{s.t.}\ \ G\,U \le w\\[1mm]
+    H &= \Gamma^\top\bar Q\,\Gamma + \bar R
+    \end{aligned}$$
+where $\bar Q = \mathrm{blkdiag}(Q, \dots, Q, P)$ and $\bar R$ includes the $R$ and $R_\Delta$ terms.
+Actuator limits, rate limits, and slip-angle bounds all become rows of $G\,U \le w$.
+</div>
+
+<h3>Practical notes</h3>
+<ul>
+<li>Use soft constraints on state bounds: add a slack $\epsilon \ge 0$ with a large weight, so the QP stays feasible when a disturbance pushes the car outside a bound.</li>
+<li>Penalize $\Delta\delta$, not just $\delta$, to keep steering smooth and to respect actuator bandwidth. Then $\delta_{k-1}$ becomes an extra state.</li>
+<li>Account for actuation delay by predicting the state forward by the delay, or by adding delay states.</li>
+<li>Blend the two models across speed. The dynamic model is singular as $v_x \to 0$, so use the kinematic model below $v_{low}$ (a few m/s, set by that singularity) and the dynamic model above $v_{high}$, with a weighted mix in between. Whether the kinematic model is adequate above $v_{low}$ depends on slip angle and lateral acceleration (see Part 1), not on speed alone.</li>
+<li>The exact Frenet equations and the world-frame versions of both models are in Part 4.</li>
+</ul>
+
+<h3>Which one to use</h3>
+<table border="1" cellpadding="8" style="border-collapse:collapse">
+<tr><th>Situation</th><th>Model</th></tr>
+<tr><td>Parking, low-speed maneuvering, motion planning feasibility checks</td><td>Kinematic</td></tr>
+<tr><td>Highway lane keeping, moderate lateral acceleration</td><td>Dynamic error model (a), linear tires</td></tr>
+<tr><td>Near the friction limit: emergency avoidance, racing</td><td>Dynamic NMPC (b) with saturating tires</td></tr>
+<tr><td>Full speed range from standstill to highway</td><td>Speed-blended kinematic and dynamic</td></tr>
+</table>
+
+<p>Assumptions throughout: planar motion, single-track (left and right tires lumped), no roll or pitch, no load transfer, and $v_x$ held constant in the lateral models.</p>
+
+<h2 id="part4">Part 4. Changing the frame: world vs Frenet</h2>
+
+<h3>Two ways to describe the same car</h3>
+<div>
+The vehicle model does not change. What changes is how the car's position is written down.
+<ul>
+<li><b>World frame:</b> the pose is $(x, y, \psi)$ in fixed global axes. Tracking means following a time-indexed reference trajectory $(x_{ref}, y_{ref}, \psi_{ref}, v_{ref})$, and the errors are differences in global axes.</li>
+<li><b>Frenet (path) frame:</b> the pose is written relative to the path. $s$ is how far along the path the car has progressed, $e_y$ is the lateral offset from the path, and $e_\psi$ is the heading relative to the path tangent. The path enters the equations only through its curvature $\kappa(s)$.</li>
+</ul>
+</div>
+
+<svg width="520" height="270" viewBox="0 0 520 270" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" font-size="14">
+  <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="black"/></marker></defs>
+  <line x1="30" y1="250" x2="95" y2="250" stroke="black" marker-end="url(#ah)"/>
+  <line x1="30" y1="250" x2="30" y2="185" stroke="black" marker-end="url(#ah)"/>
+  <text x="100" y="255">x</text><text x="22" y="180">y</text>
+  <path d="M 60 200 Q 250 60 460 90" fill="none" stroke="gray" stroke-width="2"/>
+  <path d="M 60 200 Q 155 130 255 102.5" fill="none" stroke="black" stroke-width="4"/>
+  <circle cx="60" cy="200" r="3"/>
+  <text x="150" y="172">s</text>
+  <text x="400" y="70" fill="gray">path</text>
+  <line x1="255" y1="102.5" x2="330" y2="82" stroke="gray" stroke-dasharray="4 3"/>
+  <text x="335" y="80" fill="gray">path tangent</text>
+  <line x1="255" y1="102.5" x2="267" y2="146" stroke="black"/>
+  <text x="272" y="126">e_y</text>
+  <rect x="250" y="138" width="34" height="16" transform="rotate(4.6 267 146)" fill="none" stroke="black"/>
+  <line x1="267" y1="146" x2="337" y2="127" stroke="gray" stroke-dasharray="4 3"/>
+  <line x1="267" y1="146" x2="327" y2="151" stroke="black" marker-end="url(#ah)"/>
+  <path d="M 305.6 135.4 A 40 40 0 0 1 306.9 149.2" fill="none" stroke="black"/>
+  <text x="336" y="146">e_ψ</text>
+  <text x="252" y="182">car</text>
+</svg>
+<div>World axes $(x, y)$ at bottom left. Frenet quantities: $s$ is the progress along the path (thick part), $e_y$ is the perpendicular offset from the path, and $e_\psi$ is the angle between the car's heading and the path tangent.</div>
+
+<h3>Kinematic model in both frames</h3>
+<table class="cmp" border="1" cellpadding="8" style="border-collapse:collapse;width:100%">
+<tr>
+  <th style="width:10%">Aspect</th>
+  <th style="width:45%">World frame</th>
+  <th style="width:45%">Frenet frame</th>
+</tr>
+<tr>
+  <td><b>States</b></td>
+  <td data-label="World frame">$[x,\ y,\ \psi,\ v]$, inputs $[a,\ \delta]$</td>
+  <td data-label="Frenet frame">$[s,\ e_y,\ e_\psi,\ v]$, inputs $[a,\ \delta]$. Two-state version $[e_y,\ e_\psi]$ when $v$ and $\kappa$ are given.</td>
+</tr>
+<tr>
+  <td><b>Definition of the errors</b></td>
+  <td data-label="World frame">
+    Differences from the time-indexed reference, in global axes:
+    $$\begin{aligned}
+    e_x &= x - x_{ref}(t)\\[1mm]
+    e_y &= y - y_{ref}(t)\\[1mm]
+    e_\psi &= \psi - \psi_{ref}(t)\\[1mm]
+    e_v &= v - v_{ref}(t)
+    \end{aligned}$$
+  </td>
+  <td data-label="Frenet frame">
+    Project the rear axle onto the path (closest point $(x_p, y_p)$ at $s^*$):
+    $$\begin{aligned}
+    s &= s^*\\[1mm]
+    e_y &= -(x - x_p)\sin\psi_p + (y - y_p)\cos\psi_p\\[1mm]
+    e_\psi &= \psi - \psi_p\quad(\text{wrapped to } [-\pi, \pi])
+    \end{aligned}$$
+  </td>
+</tr>
+<tr>
+  <td><b>Nonlinear equations</b></td>
+  <td data-label="World frame">
+    $$\begin{aligned}
+    \dot x &= v\cos\psi\\[1mm]
+    \dot y &= v\sin\psi\\[1mm]
+    \dot\psi &= \frac{v}{L}\tan\delta\\[1mm]
+    \dot v &= a
+    \end{aligned}$$
+  </td>
+  <td data-label="Frenet frame">
+    $$\begin{aligned}
+    \dot s &= \frac{v\cos e_\psi}{1 - \kappa e_y}\\[1mm]
+    \dot e_y &= v\sin e_\psi\\[1mm]
+    \dot e_\psi &= \frac{v}{L}\tan\delta - \kappa\,\dot s\\[1mm]
+    \dot v &= a
+    \end{aligned}$$
+  </td>
+</tr>
+<tr>
+  <td><b>Simplified error form</b></td>
+  <td data-label="World frame">
+    Errors as defined above, with input deviations
+    $$\begin{aligned}
+    \tilde\delta &= \delta - \delta_{ref}\\[1mm]
+    \tilde a &= a - a_{ref}
+    \end{aligned}$$
+    Linearized about straight-line motion only:
+    $$\begin{aligned}
+    \kappa &= 0\\[1mm]
+    \psi_{ref} &= 0\\[1mm]
+    \delta_{ref} &= 0
+    \end{aligned}$$
+    which gives:
+    $$\begin{aligned}
+    \dot e_x &= e_v\\[1mm]
+    \dot e_y &= v_{ref}\,e_\psi\\[1mm]
+    \dot e_\psi &= \frac{v_{ref}}{L}\,\tilde\delta\\[1mm]
+    \dot e_v &= \tilde a
+    \end{aligned}$$
+  </td>
+  <td data-label="Frenet frame">
+    Small $e_\psi$, small $\delta$, $\kappa e_y \ll 1$:
+    $$\begin{aligned}
+    \dot e_y &= v\,e_\psi\\[1mm]
+    \dot e_\psi &= \frac{v}{L}\,\delta - v\kappa
+    \end{aligned}$$
+  </td>
+</tr>
+<tr>
+  <td><b>General error form</b></td>
+  <td data-label="World frame">
+    Any reference heading and steering:
+    $$\begin{aligned}
+    \dot e_x &= \cos\psi_{ref}\; e_v - v_{ref}\sin\psi_{ref}\; e_\psi\\[1mm]
+    \dot e_y &= \sin\psi_{ref}\; e_v + v_{ref}\cos\psi_{ref}\; e_\psi\\[1mm]
+    \dot e_\psi &= \frac{\tan\delta_{ref}}{L}\; e_v + \frac{v_{ref}}{L\cos^2\delta_{ref}}\;\tilde\delta\\[1mm]
+    \dot e_v &= \tilde a
+    \end{aligned}$$
+  </td>
+  <td data-label="Frenet frame">
+    Linearizing the exact form about the reference ($e = 0$), with
+    $$\begin{aligned}
+    \delta_{ref} &= \arctan(L\kappa)\\[1mm]
+    \tilde\delta &= \delta - \delta_{ref}
+    \end{aligned}$$
+    gives:
+    $$\begin{aligned}
+    \dot e_y &= v\,e_\psi\\[1mm]
+    \dot e_\psi &= -v\kappa^2\,e_y + \frac{v\,(1 + L^2\kappa^2)}{L}\,\tilde\delta
+    \end{aligned}$$
+    The simplified form drops the small $\kappa^2 e_y$ term.
+  </td>
+</tr>
+<tr>
+  <td><b>Path information needed</b></td>
+  <td data-label="World frame">The whole reference trajectory over the horizon: position, heading, speed, and steering, all indexed by time.</td>
+  <td data-label="Frenet frame">Curvature $\kappa$ along the path (one number per horizon step), and the speed.</td>
+</tr>
+<tr>
+  <td><b>Linear model depends on</b></td>
+  <td data-label="World frame">$\psi_{ref}$, $v_{ref}$, $\delta_{ref}$. In the general case the Jacobians contain $\sin\psi_{ref}$ and $\cos\psi_{ref}$, so they change as the reference turns.</td>
+  <td data-label="Frenet frame">Only $v$. Curvature enters as an additive feedforward term, not inside the matrices.</td>
+</tr>
+<tr>
+  <td><b>Lane or road bounds</b></td>
+  <td data-label="World frame">Nonlinear in $(x, y)$: distance to a curved boundary.</td>
+  <td data-label="Frenet frame">Simple linear bounds on $e_y$.</td>
+</tr>
+<tr>
+  <td><b>Typical use</b></td>
+  <td data-label="World frame">Parking, time-parametrized trajectory tracking, obstacle avoidance planned in global coordinates.</td>
+  <td data-label="Frenet frame">Lane centering, lane keeping, path following at roughly constant speed.</td>
+</tr>
+</table>
+
+<h3>Dynamic model in both frames</h3>
+<table class="cmp" border="1" cellpadding="8" style="border-collapse:collapse;width:100%">
+<tr>
+  <th style="width:10%">Aspect</th>
+  <th style="width:45%">World frame</th>
+  <th style="width:45%">Frenet frame</th>
+</tr>
+<tr>
+  <td><b>States</b></td>
+  <td data-label="World frame">$[X,\ Y,\ \psi,\ v_x,\ v_y,\ \omega]$</td>
+  <td data-label="Frenet frame">$[s,\ e_y,\ e_\psi,\ v_x,\ v_y,\ \omega]$</td>
+</tr>
+<tr>
+  <td><b>Definition of the errors</b></td>
+  <td data-label="World frame">
+    Differences from the time-indexed reference, in global axes, at the CG:
+    $$\begin{aligned}
+    e_X &= X - X_{ref}(t)\\[1mm]
+    e_Y &= Y - Y_{ref}(t)\\[1mm]
+    e_\psi &= \psi - \psi_{ref}(t)
+    \end{aligned}$$
+  </td>
+  <td data-label="Frenet frame">
+    Project the CG onto the path (closest point $(x_p, y_p)$ at $s^*$):
+    $$\begin{aligned}
+    s &= s^*\\[1mm]
+    e_y &= -(X - x_p)\sin\psi_p + (Y - y_p)\cos\psi_p\\[1mm]
+    e_\psi &= \psi - \psi_p\quad(\text{wrapped to } [-\pi, \pi])
+    \end{aligned}$$
+    Rates for the 4-state model (a):
+    $$\begin{aligned}
+    \dot e_y &= v_y\cos e_\psi + v_x\sin e_\psi\\[1mm]
+    \dot e_\psi &= \omega - v_x\kappa
+    \end{aligned}$$
+  </td>
+</tr>
+<tr>
+  <td><b>Position and heading equations</b></td>
+  <td data-label="World frame">
+    $$\begin{aligned}
+    \dot X &= v_x\cos\psi - v_y\sin\psi\\[1mm]
+    \dot Y &= v_x\sin\psi + v_y\cos\psi\\[1mm]
+    \dot\psi &= \omega
+    \end{aligned}$$
+  </td>
+  <td data-label="Frenet frame">
+    $$\begin{aligned}
+    \dot s &= \frac{v_x\cos e_\psi - v_y\sin e_\psi}{1 - \kappa e_y}\\[1mm]
+    \dot e_y &= v_x\sin e_\psi + v_y\cos e_\psi\\[1mm]
+    \dot e_\psi &= \omega - \kappa\,\dot s
+    \end{aligned}$$
+  </td>
+</tr>
+<tr>
+  <td><b>Force balance</b></td>
+  <td colspan="2" data-label="World frame and Frenet frame">
+    Identical in both frames, because these are body-frame quantities:
+    $$\begin{aligned}
+    \dot v_x &= a_x + v_y\,\omega - \frac{F_{yf}\sin\delta}{m}\\[1mm]
+    \dot v_y &= \frac{F_{yf}\cos\delta + F_{yr}}{m} - v_x\,\omega\\[1mm]
+    \dot\omega &= \frac{l_f F_{yf}\cos\delta - l_r F_{yr}}{I_z}
+    \end{aligned}$$
+  </td>
+</tr>
+<tr>
+  <td><b>Small-angle error form</b></td>
+  <td data-label="World frame">No compact form. Linearizing about a reference needs Jacobians that depend on $\psi_{ref}$.</td>
+  <td data-label="Frenet frame">
+    $$\begin{aligned}
+    \dot e_y &= v_y + v_x\,e_\psi\\[1mm]
+    \dot e_\psi &= \omega - v_x\kappa
+    \end{aligned}$$
+    Combined with the linear-tire force balance, this gives the 4-state error model (a) in Part 2.
+  </td>
+</tr>
+</table>
+
+<h3>Transforming between the frames</h3>
+<div>
+<b>World to Frenet</b> (once per control cycle, to get the current $s$, $e_y$, $e_\psi$). Find the closest path point, then
+$$\begin{aligned}
+    s^* &= \arg\min_s\ \big\|(x, y) - (x_p(s), y_p(s))\big\|
+    \end{aligned}$$
+$$\begin{aligned}
+    e_y &= -(x - x_p)\sin\psi_p + (y - y_p)\cos\psi_p\\[1mm]
+    e_\psi &= \psi - \psi_p\ \ (\text{wrapped to } [-\pi, \pi])
+    \end{aligned}$$
+with $\psi_p = \operatorname{atan2}(y_p', x_p')$ and $\kappa = d\psi_p/ds$, all evaluated at $s^*$. In practice $s^*$ comes from the nearest waypoint refined by a Newton step or a local linear interpolation.
+<br><br>
+<b>Frenet to world</b> (to draw the predicted trajectory or check obstacles):
+$$\begin{aligned}
+    x &= x_p(s) - e_y\sin\psi_p(s)\\[1mm]
+    y &= y_p(s) + e_y\cos\psi_p(s)\\[1mm]
+    \psi &= \psi_p(s) + e_\psi
+    \end{aligned}$$
+<b>Velocities</b> (world rates to Frenet rates). Applying these to the kinematic and dynamic velocities gives the Frenet equations in the tables above:
+$$\begin{aligned}
+    \dot s &= \frac{\dot x\cos\psi_p + \dot y\sin\psi_p}{1 - \kappa e_y}\\[1mm]
+    \dot e_y &= -\dot x\sin\psi_p + \dot y\cos\psi_p\\[1mm]
+    \dot e_\psi &= \dot\psi - \kappa\,\dot s
+    \end{aligned}$$
+For the kinematic model, substituting
+$$\begin{aligned}
+    \dot x &= v\cos\psi\\[1mm]
+    \dot y &= v\sin\psi
+    \end{aligned}$$
+gives
+$$\begin{aligned}
+    \dot e_y &= v\sin e_\psi\\[1mm]
+    \dot s &= \frac{v\cos e_\psi}{1 - \kappa e_y}
+    \end{aligned}$$
+For the dynamic model, substituting
+$$\begin{aligned}
+    \dot X &= v_x\cos\psi - v_y\sin\psi\\[1mm]
+    \dot Y &= v_x\sin\psi + v_y\cos\psi
+    \end{aligned}$$
+adds the $v_y$ terms.
+<br><br>
+<b>Sign conventions:</b><br>
+$\kappa > 0$ for a left turn<br>
+$e_y > 0$ when the car is to the left of the path<br>
+$e_\psi = \psi - \psi_p$, positive when the car points left of the path direction<br>
+These match the dynamic error model in Part 2, where $e_\psi = \psi - \psi_{des}$.
+</div>
+
+<h3>What changes, and what does not</h3>
+<ul>
+<li>Only the position and heading equations change. The force balance is written in the car's body frame, so it is the same in both frames.</li>
+<li>Heading error:
+$$\begin{aligned}
+    e_\psi &= \psi - \psi_{path}(s)\\[1mm]
+    \frac{d\psi_{path}}{ds} &= \kappa\\[1mm]
+    \dot e_\psi &= \dot\psi - \kappa\,\dot s
+    \end{aligned}$$
+The last line is the car's yaw rate minus the rate at which the path itself turns.</li>
+<li>Lateral offset: $\dot e_y$ is the part of the velocity perpendicular to the path tangent, which is $v\sin e_\psi$ for the kinematic model, plus $v_y\cos e_\psi$ when the car also slides sideways.</li>
+<li>Progress: $\dot s$ is the part of the velocity along the tangent, stretched by $1/(1 - \kappa e_y)$. A point offset from the path travels on an arc of a different radius, so it covers path length at a different rate.</li>
+<li>Singularity: the Frenet frame breaks down when $\kappa e_y = 1$, meaning the car is at the path's center of curvature. It also needs the car's projection onto the path to get $s$.</li>
+</ul>
+
+<h3>The only difference between the two models, in the Frenet frame</h3>
+<div>
+Both models share the same path-frame kinematics:
+$$\begin{aligned}
+    \dot e_y &= v_x\sin e_\psi + v_y\cos e_\psi \approx v_x\,e_\psi + v_y\\[1mm]
+    \dot e_\psi &= \omega - v_x\kappa
+    \end{aligned}$$
+They differ only in where $v_y$ and $\omega$ come from:
+<ul>
+<li><b>Kinematic:</b> no lateral slip at the rear axle, and yaw rate is an algebraic function of steering:
+$$\begin{aligned}
+    v_y &= 0\\[1mm]
+    \omega &= \frac{v}{L}\tan\delta
+    \end{aligned}$$</li>
+<li><b>Dynamic:</b> $v_y$ and $\omega$ are states with their own differential equations, driven by tire forces. They lag the steering and are limited by tire saturation.</li>
+</ul>
+</div>
+
+<h3>Why the simplified equations look different, but are the same model</h3>
+<div>
+Compare the simplified world-frame form (table above, straight-line linearization only) with the simplified Frenet form:
+$$\begin{aligned}
+    \text{World: }\ \dot e_y &= v_{ref}\,e_\psi\\
+    \dot e_\psi &= \frac{v_{ref}}{L}\,\tilde\delta\\[2mm]
+    \text{Frenet: }\ \dot e_y &= v\,e_\psi\\
+    \dot e_\psi &= \frac{v}{L}\,\delta - v\kappa
+    \end{aligned}$$
+<ol>
+<li><b>Different meaning of $e_y$ and $e_\psi$.</b> In the world frame they are differences from a reference trajectory in global axes. In the Frenet frame they are measured relative to the path: $e_y$ is perpendicular to it and $e_\psi$ is against its tangent.</li>
+<li><b>The curvature term.</b> The Frenet $\dot e_\psi$ is yaw rate minus the path's turning rate, so $v\kappa$ appears. The world-frame simplification assumed a straight reference, so $\kappa = 0$ and the term disappears.</li>
+<li><b>Which steering variable.</b> The world form uses the deviation
+$$\begin{aligned}
+    \tilde\delta &= \delta - \delta_{ref}
+    \end{aligned}$$
+Holding a path of curvature $\kappa$ needs
+$$\begin{aligned}
+    \delta_{ref} &\approx L\kappa
+    \end{aligned}$$
+so
+$$\begin{aligned}
+    \frac{v}{L}\,\tilde\delta &= \frac{v}{L}\,(\delta - L\kappa) = \frac{v}{L}\,\delta - v\kappa
+    \end{aligned}$$
+which is exactly the Frenet equation. The Frenet form keeps the full $\delta$ and puts the feedforward in $\kappa$.</li>
+<li><b>Number of states.</b> The world form has four ($e_x, e_y, e_\psi, e_v$) with acceleration as an input. The Frenet form uses two ($e_y, e_\psi$) and treats speed and curvature as known. If you drop $e_x$ and $e_v$ from the world form and use $\delta - L\kappa$, the two coincide.</li>
+<li><b>Approximations.</b> Both simplify with small $e_\psi$, small $\delta$, and (for Frenet) $\kappa e_y \ll 1$. The exact equations are in the tables above.</li>
+</ol>
+<b>Which to use:</b> Frenet for lane centering and lane keeping, because lane bounds are linear in $e_y$, curvature enters as feedforward, and it matches the dynamic error model's frame. World frame for time-parametrized trajectory tracking, obstacle avoidance in global coordinates, and parking.
+</div>
+
+</body>
+</html>
