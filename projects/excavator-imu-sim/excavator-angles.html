@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Excavator forward kinematics</title>
+<style>
+  html, body { height: 100%; overflow: hidden; overflow-anchor: none; }
+  body { box-sizing: border-box; display: flex; flex-direction: column; margin: 0; padding: 16px; background: #1b2129; color: #e8edf2;
+         font-family: 'Chakra Petch', system-ui, sans-serif; }
+  h3 { flex: none; margin: 0 0 12px; font-size: 15px; }
+  input[type=range] { accent-color: #ff8a1e; width: 180px; vertical-align: middle; }
+  svg { display: block; width: 100%; flex: 1 1 0; min-height: 0; max-width: 640px; }
+  pre { color: #8b98a5; font-size: 12px; line-height: 1.6; }
+  .ctl { flex: none; line-height: 2; font-size: 13px; white-space: nowrap; }
+  .ctl span { font-family: ui-monospace, Menlo, monospace; color: #38d996;
+              display: inline-block; width: 4ch; }
+  pre { flex: none; height: 12.8em; margin: 8px 0 0; overflow: hidden; white-space: pre; }
+</style>
+</head>
+<body>
+<h3>Excavator forward kinematics: angle definitions</h3>
+
+<div class="ctl">
+  α₁ (boom, absolute): <input id="a1" type="range" min="-30" max="80" value="40"> <span id="a1v"></span><br>
+  φ₂ (boom-stick joint): <input id="p2" type="range" min="30" max="175" value="100"> <span id="p2v"></span><br>
+  φ₃ (stick-bucket joint): <input id="p3" type="range" min="30" max="175" value="110"> <span id="p3v"></span>
+</div>
+
+<svg id="svg" width="640" height="560" viewBox="0 0 640 560"></svg>
+<pre id="out"></pre>
+
+<script>
+const OX = 120, OY = 375, S = 36;
+const P = { x: 0, y: 3.6, h: 1.8, k: 1.2, l1: 4, l2: 2.5, l3: 1.2 };
+
+const rad = d => d * Math.PI / 180;
+const T = p => [OX + p[0] * S, OY - p[1] * S];
+const f = v => v.toFixed(2);
+
+function line(a, b, style) {
+  const [x1, y1] = T(a), [x2, y2] = T(b);
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${style}/>`;
+}
+function rect(x0, y0, x1, y1, style) {
+  const [x, y] = T([x0, y1]);
+  return `<rect x="${x}" y="${y}" width="${(x1 - x0) * S}" height="${(y1 - y0) * S}" ${style}/>`;
+}
+function dot(p, color) {
+  const [x, y] = T(p);
+  return `<circle cx="${x}" cy="${y}" r="5" fill="${color}" stroke="#14181d" stroke-width="2"/>`;
+}
+// tapered link from a to b, half-widths w0 -> w1, rounded at both ends
+function link(a, b, w0, w1, fill, stroke) {
+  const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+  const nx = -Math.sin(ang), ny = Math.cos(ang);
+  const q = [[a, w0], [b, w1]].map(([p, w]) => [[p[0] + nx * w, p[1] + ny * w], [p[0] - nx * w, p[1] - ny * w]]);
+  const pts = [q[0][0], q[1][0], q[1][1], q[0][1]].map(p => T(p).join(',')).join(' ');
+  const [x1, y1] = T(a), [x2, y2] = T(b);
+  return `<polygon points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linejoin="round"/>`
+       + `<circle cx="${x1}" cy="${y1}" r="${w0 * S}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`
+       + `<circle cx="${x2}" cy="${y2}" r="${w1 * S}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+}
+// bucket drawn in the stick-tip frame: u along the bucket link, v to its left
+function bucket(o, a, fill, stroke) {
+  const c = Math.cos(rad(a)), s = Math.sin(rad(a));
+  const W = (u, v) => T([o[0] + u * c - v * s, o[1] + u * s + v * c]).join(' ');
+  return `<path d="M${W(-0.25, 0.1)} Q${W(0.2, 0.7)} ${W(1.0, 0.4)} L${W(1.25, 0)} `
+       + `Q${W(0.6, -0.05)} ${W(0.1, -0.35)} Z" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linejoin="round"/>`;
+}
+function text(p, s, color, anchor) {
+  const [x, y] = T(p);
+  return `<text x="${x}" y="${y}" fill="${color}" font-size="14" text-anchor="${anchor || 'start'}">${s}</text>`;
+}
+// arc at center c from angle a0 to a1 (deg, math convention), shortest way
+function arc(c, r, a0, a1, color, label) {
+  const d = ((a1 - a0 + 540) % 360) - 180;
+  const pt = a => [c[0] + r * Math.cos(rad(a)), c[1] + r * Math.sin(rad(a))];
+  const [sx, sy] = T(pt(a0)), [ex, ey] = T(pt(a0 + d));
+  const mid = a0 + d / 2;
+  const lp = [c[0] + (r + 0.35) * Math.cos(rad(mid)), c[1] + (r + 0.35) * Math.sin(rad(mid))];
+  return `<path d="M${sx} ${sy} A${r * S} ${r * S} 0 0 ${d > 0 ? 0 : 1} ${ex} ${ey}" fill="none" stroke="${color}" stroke-width="2"/>`
+       + text(lp, label, color, 'middle');
+}
+
+function draw() {
+  const a1 = +document.getElementById('a1').value;
+  const p2 = +document.getElementById('p2').value;
+  const p3 = +document.getElementById('p3').value;
+  const a2 = a1 + p2 - 180;   // stick folds clockwise from the boom
+  const a3 = a2 + p3 - 180;   // bucket folds clockwise from the stick
+  document.getElementById('a1v').textContent = a1 + '°';
+  document.getElementById('p2v').textContent = p2 + '°';
+  document.getElementById('p3v').textContent = p3 + '°';
+
+  const P1 = [P.x, P.y];
+  const P2 = [P.x + P.k, P.y - P.h];
+  const P3 = [P2[0] + P.l1 * Math.cos(rad(a1)), P2[1] + P.l1 * Math.sin(rad(a1))];
+  const P4 = [P3[0] + P.l2 * Math.cos(rad(a2)), P3[1] + P.l2 * Math.sin(rad(a2))];
+  const P5 = [P4[0] + P.l3 * Math.cos(rad(a3)), P4[1] + P.l3 * Math.sin(rad(a3))];
+
+  let s = '';
+  // ground, tracks, body, cab, antenna mast
+  s += line([-3, 0], [11, 0], 'stroke="#5a6673" stroke-width="2"');
+  s += `<rect x="${T([-1.8, 1])[0]}" y="${T([-1.8, 1])[1]}" width="${4 * S}" height="${S}" rx="${0.45 * S}" fill="#2b333d" stroke="#5a6673" stroke-width="2"/>`;
+  s += rect(-1.6, 1, 1.4, 2.4, 'fill="#38424e" stroke="#5a6673" stroke-width="2" rx="6"');
+  s += rect(-1.6, 2.4, 0.4, 3.4, 'fill="#2f4a5c" stroke="#5a6673" stroke-width="2" rx="6"');
+  s += line([P.x, 3.4], P1, 'stroke="#8b98a5" stroke-width="2"');
+
+  // reference horizontals
+  const ref = (p, len) => line(p, [p[0] + len, p[1]], 'stroke="#5a6673" stroke-dasharray="5 4"');
+  s += ref(P2, 2.4) + ref(P3, 2.2) + ref(P4, 1.8);
+
+  // h and k dimensions
+  s += line(P1, [P1[0], P2[1]], 'stroke="#38d996" stroke-dasharray="3 3"');
+  s += line([P1[0], P2[1]], P2, 'stroke="#38d996" stroke-dasharray="3 3"');
+  s += text([P1[0] - 0.15, (P1[1] + P2[1]) / 2], 'h', '#38d996', 'end');
+  s += text([(P1[0] + P2[0]) / 2, P2[1] - 0.35], 'k', '#38d996', 'middle');
+
+  // links
+  s += link(P2, P3, 0.28, 0.18, '#ff8a1e', '#a9570f');
+  s += link(P3, P4, 0.2, 0.14, '#ffb04d', '#b07a2e');
+  s += bucket(P4, a3, '#e8edf2', '#8b98a5');
+
+  // angle arcs: absolute (blue), joint (red)
+  s += arc(P2, 1.3, 0, a1, '#5aa9ff', 'α₁');
+  s += arc(P3, 1.2, 0, a2, '#5aa9ff', 'α₂');
+  s += arc(P4, 1.0, 0, a3, '#5aa9ff', 'α₃');
+  s += arc(P3, 0.6, a1 + 180, a2, '#ff6b6b', 'φ₂');
+  s += arc(P4, 0.5, a2 + 180, a3, '#ff6b6b', 'φ₃');
+
+  // points
+  s += dot(P1, '#38d996') + text([P1[0] + 0.2, P1[1] + 0.15], 'P1 (x₁,y₁) GPS', '#38d996');
+  s += dot(P2, '#e8edf2') + text([P2[0] + 0.15, P2[1] - 0.45], 'P2 boom pivot', '#e8edf2');
+  s += dot(P3, '#e8edf2') + text([P3[0] - 0.1, P3[1] + 0.4], 'P3 boom tip', '#e8edf2', 'middle');
+  s += dot(P4, '#e8edf2') + text([P4[0] + 0.15, P4[1] - 0.35], 'P4 stick tip', '#e8edf2');
+  s += dot(P5, '#e8edf2') + text([P5[0] + 0.15, P5[1] - 0.35], 'P5 bucket tip', '#e8edf2');
+
+  document.getElementById('svg').innerHTML = s;
+
+  const row = (n, p) => `${n}: x=${f(p[0])}  y=${f(p[1])}`;
+  document.getElementById('out').textContent =
+    `α1=${f(a1)}°  α2=${f(a2)}°  α3=${f(a3)}°   (absolute, CCW from +x)\n` +
+    `α2 = α1 + φ2 - 180,  α3 = α2 + φ3 - 180\n\n` +
+    [row('P1', P1), row('P2', P2), row('P3', P3), row('P4', P4), row('P5', P5)].join('\n');
+}
+
+['a1', 'p2', 'p3'].forEach(id => document.getElementById(id).addEventListener('input', draw));
+draw();
+</script>
+</body>
+</html>

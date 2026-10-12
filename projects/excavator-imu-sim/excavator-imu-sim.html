@@ -93,16 +93,7 @@ canvas.strip{width:100%;height:44px;display:block;margin:8px 0 2px;background:va
 .explain p{margin-top:10px}
 .explain b{color:var(--ink);font-weight:600}
 
-/* angle definitions */
-.angles{border-top:1px solid var(--line);margin-top:22px;padding-top:16px}
-.angles h2{font-size:16px;font-weight:700}
-.angles p{color:var(--dim);font-size:12.5px;line-height:1.7;max-width:76ch;margin:4px 0 10px}
-.angles iframe{display:block;width:100%;height:820px;border:1px solid var(--line);
-  border-radius:10px;background:#fff}
-.angles a{color:var(--orange)}
-
 @media (max-width:760px){
-  .angles iframe{height:640px}
   .telemetry{grid-template-columns:1fr}
   .joint{padding:0 0 14px}
   .joint+.joint{border-left:none;border-top:1px solid var(--line);padding-top:14px}
@@ -120,7 +111,6 @@ canvas.strip{width:100%;height:44px;display:block;margin:8px 0 2px;background:va
   </div>
   <div id="status" role="status">Manual control</div>
 </header>
-
 
 <figure class="stage">
   <canvas id="world" width="1100" height="530"></canvas>
@@ -207,165 +197,6 @@ final grade.</p>
   hold the cutting angle, through rate limits and actuator lag. The gauge beside the machine shows
   the live depth to the target — green inside a ±5 cm band.</p>
 </details>
-
-<section class="angles">
-  <h2>Angle definitions</h2>
-  <p>The kinematics behind the estimates: absolute link angles (α, blue) versus joint angles
-  (φ, red). Drag the sliders to move the linkage.</p>
-  <iframe srcdoc="&lt;!doctype html&gt;
-&lt;html&gt;
-&lt;head&gt;
-&lt;meta charset=&quot;utf-8&quot;&gt;
-&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
-&lt;title&gt;Excavator forward kinematics&lt;/title&gt;
-&lt;style&gt;
-  html, body { height: 100%; overflow: hidden; overflow-anchor: none; }
-  body { box-sizing: border-box; display: flex; flex-direction: column; margin: 0; padding: 16px; background: #1b2129; color: #e8edf2;
-         font-family: &#x27;Chakra Petch&#x27;, system-ui, sans-serif; }
-  h3 { flex: none; margin: 0 0 12px; font-size: 15px; }
-  input[type=range] { accent-color: #ff8a1e; width: 180px; vertical-align: middle; }
-  svg { display: block; width: 100%; flex: 1 1 0; min-height: 0; max-width: 640px; }
-  pre { color: #8b98a5; font-size: 12px; line-height: 1.6; }
-  .ctl { flex: none; line-height: 2; font-size: 13px; white-space: nowrap; }
-  .ctl span { font-family: ui-monospace, Menlo, monospace; color: #38d996;
-              display: inline-block; width: 4ch; }
-  pre { flex: none; height: 12.8em; margin: 8px 0 0; overflow: hidden; white-space: pre; }
-&lt;/style&gt;
-&lt;/head&gt;
-&lt;body&gt;
-&lt;h3&gt;Excavator forward kinematics: angle definitions&lt;/h3&gt;
-
-&lt;div class=&quot;ctl&quot;&gt;
-  α₁ (boom, absolute): &lt;input id=&quot;a1&quot; type=&quot;range&quot; min=&quot;-30&quot; max=&quot;80&quot; value=&quot;40&quot;&gt; &lt;span id=&quot;a1v&quot;&gt;&lt;/span&gt;&lt;br&gt;
-  φ₂ (boom-stick joint): &lt;input id=&quot;p2&quot; type=&quot;range&quot; min=&quot;30&quot; max=&quot;175&quot; value=&quot;100&quot;&gt; &lt;span id=&quot;p2v&quot;&gt;&lt;/span&gt;&lt;br&gt;
-  φ₃ (stick-bucket joint): &lt;input id=&quot;p3&quot; type=&quot;range&quot; min=&quot;30&quot; max=&quot;175&quot; value=&quot;110&quot;&gt; &lt;span id=&quot;p3v&quot;&gt;&lt;/span&gt;
-&lt;/div&gt;
-
-&lt;svg id=&quot;svg&quot; width=&quot;640&quot; height=&quot;560&quot; viewBox=&quot;0 0 640 560&quot;&gt;&lt;/svg&gt;
-&lt;pre id=&quot;out&quot;&gt;&lt;/pre&gt;
-
-&lt;script&gt;
-const OX = 120, OY = 375, S = 36;
-const P = { x: 0, y: 3.6, h: 1.8, k: 1.2, l1: 4, l2: 2.5, l3: 1.2 };
-
-const rad = d =&gt; d * Math.PI / 180;
-const T = p =&gt; [OX + p[0] * S, OY - p[1] * S];
-const f = v =&gt; v.toFixed(2);
-
-function line(a, b, style) {
-  const [x1, y1] = T(a), [x2, y2] = T(b);
-  return `&lt;line x1=&quot;${x1}&quot; y1=&quot;${y1}&quot; x2=&quot;${x2}&quot; y2=&quot;${y2}&quot; ${style}/&gt;`;
-}
-function rect(x0, y0, x1, y1, style) {
-  const [x, y] = T([x0, y1]);
-  return `&lt;rect x=&quot;${x}&quot; y=&quot;${y}&quot; width=&quot;${(x1 - x0) * S}&quot; height=&quot;${(y1 - y0) * S}&quot; ${style}/&gt;`;
-}
-function dot(p, color) {
-  const [x, y] = T(p);
-  return `&lt;circle cx=&quot;${x}&quot; cy=&quot;${y}&quot; r=&quot;5&quot; fill=&quot;${color}&quot; stroke=&quot;#14181d&quot; stroke-width=&quot;2&quot;/&gt;`;
-}
-// tapered link from a to b, half-widths w0 -&gt; w1, rounded at both ends
-function link(a, b, w0, w1, fill, stroke) {
-  const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
-  const nx = -Math.sin(ang), ny = Math.cos(ang);
-  const q = [[a, w0], [b, w1]].map(([p, w]) =&gt; [[p[0] + nx * w, p[1] + ny * w], [p[0] - nx * w, p[1] - ny * w]]);
-  const pts = [q[0][0], q[1][0], q[1][1], q[0][1]].map(p =&gt; T(p).join(&#x27;,&#x27;)).join(&#x27; &#x27;);
-  const [x1, y1] = T(a), [x2, y2] = T(b);
-  return `&lt;polygon points=&quot;${pts}&quot; fill=&quot;${fill}&quot; stroke=&quot;${stroke}&quot; stroke-width=&quot;2&quot; stroke-linejoin=&quot;round&quot;/&gt;`
-       + `&lt;circle cx=&quot;${x1}&quot; cy=&quot;${y1}&quot; r=&quot;${w0 * S}&quot; fill=&quot;${fill}&quot; stroke=&quot;${stroke}&quot; stroke-width=&quot;2&quot;/&gt;`
-       + `&lt;circle cx=&quot;${x2}&quot; cy=&quot;${y2}&quot; r=&quot;${w1 * S}&quot; fill=&quot;${fill}&quot; stroke=&quot;${stroke}&quot; stroke-width=&quot;2&quot;/&gt;`;
-}
-// bucket drawn in the stick-tip frame: u along the bucket link, v to its left
-function bucket(o, a, fill, stroke) {
-  const c = Math.cos(rad(a)), s = Math.sin(rad(a));
-  const W = (u, v) =&gt; T([o[0] + u * c - v * s, o[1] + u * s + v * c]).join(&#x27; &#x27;);
-  return `&lt;path d=&quot;M${W(-0.25, 0.1)} Q${W(0.2, 0.7)} ${W(1.0, 0.4)} L${W(1.25, 0)} `
-       + `Q${W(0.6, -0.05)} ${W(0.1, -0.35)} Z&quot; fill=&quot;${fill}&quot; stroke=&quot;${stroke}&quot; stroke-width=&quot;2&quot; stroke-linejoin=&quot;round&quot;/&gt;`;
-}
-function text(p, s, color, anchor) {
-  const [x, y] = T(p);
-  return `&lt;text x=&quot;${x}&quot; y=&quot;${y}&quot; fill=&quot;${color}&quot; font-size=&quot;14&quot; text-anchor=&quot;${anchor || &#x27;start&#x27;}&quot;&gt;${s}&lt;/text&gt;`;
-}
-// arc at center c from angle a0 to a1 (deg, math convention), shortest way
-function arc(c, r, a0, a1, color, label) {
-  const d = ((a1 - a0 + 540) % 360) - 180;
-  const pt = a =&gt; [c[0] + r * Math.cos(rad(a)), c[1] + r * Math.sin(rad(a))];
-  const [sx, sy] = T(pt(a0)), [ex, ey] = T(pt(a0 + d));
-  const mid = a0 + d / 2;
-  const lp = [c[0] + (r + 0.35) * Math.cos(rad(mid)), c[1] + (r + 0.35) * Math.sin(rad(mid))];
-  return `&lt;path d=&quot;M${sx} ${sy} A${r * S} ${r * S} 0 0 ${d &gt; 0 ? 0 : 1} ${ex} ${ey}&quot; fill=&quot;none&quot; stroke=&quot;${color}&quot; stroke-width=&quot;2&quot;/&gt;`
-       + text(lp, label, color, &#x27;middle&#x27;);
-}
-
-function draw() {
-  const a1 = +document.getElementById(&#x27;a1&#x27;).value;
-  const p2 = +document.getElementById(&#x27;p2&#x27;).value;
-  const p3 = +document.getElementById(&#x27;p3&#x27;).value;
-  const a2 = a1 + p2 - 180;   // stick folds clockwise from the boom
-  const a3 = a2 + p3 - 180;   // bucket folds clockwise from the stick
-  document.getElementById(&#x27;a1v&#x27;).textContent = a1 + &#x27;°&#x27;;
-  document.getElementById(&#x27;p2v&#x27;).textContent = p2 + &#x27;°&#x27;;
-  document.getElementById(&#x27;p3v&#x27;).textContent = p3 + &#x27;°&#x27;;
-
-  const P1 = [P.x, P.y];
-  const P2 = [P.x + P.k, P.y - P.h];
-  const P3 = [P2[0] + P.l1 * Math.cos(rad(a1)), P2[1] + P.l1 * Math.sin(rad(a1))];
-  const P4 = [P3[0] + P.l2 * Math.cos(rad(a2)), P3[1] + P.l2 * Math.sin(rad(a2))];
-  const P5 = [P4[0] + P.l3 * Math.cos(rad(a3)), P4[1] + P.l3 * Math.sin(rad(a3))];
-
-  let s = &#x27;&#x27;;
-  // ground, tracks, body, cab, antenna mast
-  s += line([-3, 0], [11, 0], &#x27;stroke=&quot;#5a6673&quot; stroke-width=&quot;2&quot;&#x27;);
-  s += `&lt;rect x=&quot;${T([-1.8, 1])[0]}&quot; y=&quot;${T([-1.8, 1])[1]}&quot; width=&quot;${4 * S}&quot; height=&quot;${S}&quot; rx=&quot;${0.45 * S}&quot; fill=&quot;#2b333d&quot; stroke=&quot;#5a6673&quot; stroke-width=&quot;2&quot;/&gt;`;
-  s += rect(-1.6, 1, 1.4, 2.4, &#x27;fill=&quot;#38424e&quot; stroke=&quot;#5a6673&quot; stroke-width=&quot;2&quot; rx=&quot;6&quot;&#x27;);
-  s += rect(-1.6, 2.4, 0.4, 3.4, &#x27;fill=&quot;#2f4a5c&quot; stroke=&quot;#5a6673&quot; stroke-width=&quot;2&quot; rx=&quot;6&quot;&#x27;);
-  s += line([P.x, 3.4], P1, &#x27;stroke=&quot;#8b98a5&quot; stroke-width=&quot;2&quot;&#x27;);
-
-  // reference horizontals
-  const ref = (p, len) =&gt; line(p, [p[0] + len, p[1]], &#x27;stroke=&quot;#5a6673&quot; stroke-dasharray=&quot;5 4&quot;&#x27;);
-  s += ref(P2, 2.4) + ref(P3, 2.2) + ref(P4, 1.8);
-
-  // h and k dimensions
-  s += line(P1, [P1[0], P2[1]], &#x27;stroke=&quot;#38d996&quot; stroke-dasharray=&quot;3 3&quot;&#x27;);
-  s += line([P1[0], P2[1]], P2, &#x27;stroke=&quot;#38d996&quot; stroke-dasharray=&quot;3 3&quot;&#x27;);
-  s += text([P1[0] - 0.15, (P1[1] + P2[1]) / 2], &#x27;h&#x27;, &#x27;#38d996&#x27;, &#x27;end&#x27;);
-  s += text([(P1[0] + P2[0]) / 2, P2[1] - 0.35], &#x27;k&#x27;, &#x27;#38d996&#x27;, &#x27;middle&#x27;);
-
-  // links
-  s += link(P2, P3, 0.28, 0.18, &#x27;#ff8a1e&#x27;, &#x27;#a9570f&#x27;);
-  s += link(P3, P4, 0.2, 0.14, &#x27;#ffb04d&#x27;, &#x27;#b07a2e&#x27;);
-  s += bucket(P4, a3, &#x27;#e8edf2&#x27;, &#x27;#8b98a5&#x27;);
-
-  // angle arcs: absolute (blue), joint (red)
-  s += arc(P2, 1.3, 0, a1, &#x27;#5aa9ff&#x27;, &#x27;α₁&#x27;);
-  s += arc(P3, 1.2, 0, a2, &#x27;#5aa9ff&#x27;, &#x27;α₂&#x27;);
-  s += arc(P4, 1.0, 0, a3, &#x27;#5aa9ff&#x27;, &#x27;α₃&#x27;);
-  s += arc(P3, 0.6, a1 + 180, a2, &#x27;#ff6b6b&#x27;, &#x27;φ₂&#x27;);
-  s += arc(P4, 0.5, a2 + 180, a3, &#x27;#ff6b6b&#x27;, &#x27;φ₃&#x27;);
-
-  // points
-  s += dot(P1, &#x27;#38d996&#x27;) + text([P1[0] + 0.2, P1[1] + 0.15], &#x27;P1 (x₁,y₁) GPS&#x27;, &#x27;#38d996&#x27;);
-  s += dot(P2, &#x27;#e8edf2&#x27;) + text([P2[0] + 0.15, P2[1] - 0.45], &#x27;P2 boom pivot&#x27;, &#x27;#e8edf2&#x27;);
-  s += dot(P3, &#x27;#e8edf2&#x27;) + text([P3[0] - 0.1, P3[1] + 0.4], &#x27;P3 boom tip&#x27;, &#x27;#e8edf2&#x27;, &#x27;middle&#x27;);
-  s += dot(P4, &#x27;#e8edf2&#x27;) + text([P4[0] + 0.15, P4[1] - 0.35], &#x27;P4 stick tip&#x27;, &#x27;#e8edf2&#x27;);
-  s += dot(P5, &#x27;#e8edf2&#x27;) + text([P5[0] + 0.15, P5[1] - 0.35], &#x27;P5 bucket tip&#x27;, &#x27;#e8edf2&#x27;);
-
-  document.getElementById(&#x27;svg&#x27;).innerHTML = s;
-
-  const row = (n, p) =&gt; `${n}: x=${f(p[0])}  y=${f(p[1])}`;
-  document.getElementById(&#x27;out&#x27;).textContent =
-    `α1=${f(a1)}°  α2=${f(a2)}°  α3=${f(a3)}°   (absolute, CCW from +x)\n` +
-    `α2 = α1 + φ2 - 180,  α3 = α2 + φ3 - 180\n\n` +
-    [row(&#x27;P1&#x27;, P1), row(&#x27;P2&#x27;, P2), row(&#x27;P3&#x27;, P3), row(&#x27;P4&#x27;, P4), row(&#x27;P5&#x27;, P5)].join(&#x27;\n&#x27;);
-}
-
-[&#x27;a1&#x27;, &#x27;p2&#x27;, &#x27;p3&#x27;].forEach(id =&gt; document.getElementById(id).addEventListener(&#x27;input&#x27;, draw));
-draw();
-&lt;/script&gt;
-&lt;/body&gt;
-&lt;/html&gt;
-" title="Excavator forward kinematics: angle definitions"></iframe>
-</section>
 </div>
 <script>
 'use strict';

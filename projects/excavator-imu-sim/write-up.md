@@ -29,7 +29,13 @@ Click **Watch demo** for a scripted automated pass, or take over: **W/S** drives
 <iframe class="demo-frame" src="./excavator-imu-sim.html" title="Excavator Automation interactive demo" loading="lazy"></iframe>
 <p class="demo-cap">Live demo — single self-contained HTML file, embedded directly, no build step.</p>
 
-## 6. Summary
+## 6. Angle definitions
+
+The kinematics behind the estimates: absolute link angles (α, blue) versus joint angles (φ, red), with the boom pivot offset (h, k) from the GPS point. Drag the sliders to move the linkage.
+
+<iframe class="demo-frame" src="./excavator-angles.html" title="Excavator forward kinematics: angle definitions" loading="lazy" style="height:760px"></iframe>
+
+## 7. Summary
 
 - Three independent per-link IMUs, each axis run through its own angle + gyro-bias Kalman filter, fusing gyro-rate integration with a noisier accel-derived measurement.
 - Forward kinematics turning the three fused angles into a bucket-tip position, with the demo's error readout showing how estimator error at each joint propagates differently through the linkage.
