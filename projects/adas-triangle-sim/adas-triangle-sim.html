@@ -163,7 +163,7 @@
       <button class="btn reset" id="btnReset">↺ RESET TO START LINE</button>
       <button class="btn" id="btnNudge">NUDGE ±1.5 m</button>
       <div style="font-family:var(--mono);font-size:9.5px;color:var(--ink-faint);letter-spacing:.05em;line-height:1.5">
-        Or grab the car in the view and drag it sideways.</div>
+        Drag the car sideways, or drag the amber knob on the car to rotate its heading.</div>
     </div>
 
     <div class="sec">
@@ -199,8 +199,8 @@
     <div id="viewWrap">
       <canvas id="cv"></canvas>
       <div id="viewToggle">
-        <button id="btnTop" class="vbtn active">TOP</button>
-        <button id="btnChase" class="vbtn">CHASE</button>
+        <button id="btnTop" class="vbtn">TOP</button>
+        <button id="btnChase" class="vbtn active">CHASE</button>
       </div>
       <div id="respawnFlash"></div>
       <div id="respawnMsg">LANE DEPARTURE · RESPAWN</div>
@@ -280,6 +280,7 @@ const eHist = [];
 const events = [];
 const CHART_SPAN = 15;
 let dragging = false;
+let rotating = false;   // dragging the heading handle on the car's nose
 
 /* --- small linear algebra --- */
 const m4v=(A,x)=>[0,1,2,3].map(i=>A[i][0]*x[0]+A[i][1]*x[1]+A[i][2]*x[2]+A[i][3]*x[3]);
@@ -463,12 +464,14 @@ function step(dt){
   const x = xVec();
   const wdes = state.v * p.k;
   const xd = m4v(cm.A, x).map((val,i)=> val + cm.B[i]*state.delta + cm.D[i]*wdes);
-  if (!dragging){
+  if (!dragging && !rotating){
     state.e   += xd[0]*dt;
     state.ed  += xd[1]*dt;
   }
-  state.psi  += xd[2]*dt;
-  state.psid += xd[3]*dt;
+  if (!rotating){
+    state.psi  += xd[2]*dt;
+    state.psid += xd[3]*dt;
+  }
 
   const denom = Math.max(0.25, 1 - state.e*p.k);
   const dsdt = state.v * Math.cos(state.psi) / denom;
@@ -478,7 +481,7 @@ function step(dt){
   simTime += dt; state.lapT += dt; tick++;
   if (prevS > TOTAL - dsdt*dt*2 && state.s < 5){ state.lap++; state.lastLap = state.lapT; state.lapT = 0; }
 
-  if (!dragging && Math.abs(state.e) > RESPAWN_E){
+  if (!dragging && !rotating && Math.abs(state.e) > RESPAWN_E){
     state.e=0; state.ed=0; state.psi=0; state.psid=0; state.delta=0; state.dFilt=0;
     flashT = 1.0; events.push(simTime);
   }
@@ -516,7 +519,7 @@ function offsetPt(p, lat){  // point offset `lat` metres left of centerline
   return { x: p.x - lat*Math.sin(p.h), y: p.y + lat*Math.cos(p.h) };
 }
 
-let viewMode = 'top';
+let viewMode = 'chase';
 function drawScene3D(){
   const horizon = H*0.40, f = H*1.08, camH = 2.5;
   const camPose = poseAt(state.s - 7);
@@ -601,40 +604,116 @@ function drawScene3D(){
   drawCar(cam, horizon, f, camH);
 }
 
-let carScr = { cx:0, cy:0, rx:40, ry:50, pxPerM:1 };
+let carScr = { cx:0, cy:0, rx:40, ry:50, pxPerM:1, top:false, chase:false, px:0, py:0, hx:0, hy:0 };
+let hoverHandle = false;
 function drawCar(cam, horizon, f, camH){
   const p = poseAt(state.s);
   const cw = offsetPt(p, state.e);
-  const pr = project(cam, cw.x, cw.y);
-  const sc = toScreen(cam, pr, horizon, f, camH);
-  const scale = f / Math.max(1, pr.z);        // px per metre at car depth
-  const w = 1.84*scale, h = 1.30*scale;
-  carScr = { cx: sc.x, cy: sc.y - h*0.45, rx: w*0.9+24, ry: h*0.9+24, pxPerM: scale };
+  const th = p.h + state.psi;                   // true world heading → car really yaws
+  const cth = Math.cos(th), sth = Math.sin(th);
+  // local car frame (fx forward, ly left, hz height) → screen
+  const pt = (fx,ly,hz)=>{
+    const wx = cw.x + fx*cth - ly*sth, wy = cw.y + fx*sth + ly*cth;
+    const q = project(cam, wx, wy), z = Math.max(0.9, q.z);
+    return { x: W/2 - q.lx*f/z, y: horizon + (camH-hz)*f/z, z, wx, wy };
+  };
+  const c0 = pt(0,0,0);
+  const scale = f / Math.max(1, c0.z);          // px per metre at car depth
+  carScr = { cx: c0.x, cy: c0.y - 0.7*scale, rx: 1.5*scale+24, ry: 0.9*scale+24, pxPerM: scale,
+             top: true, chase: true, hx: 0, hy: 0, cam, f, cwx: cw.x, cwy: cw.y, kz: 1 };
 
+  // ground shadow
+  ctx.fillStyle = 'rgba(0,0,0,.42)';
+  ctx.beginPath();
+  [[-2.2,-1.1],[2.5,-1.1],[2.5,1.1],[-2.2,1.1]].forEach(([a,b],k)=>{ const q=pt(a,b,0); k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y); });
+  ctx.closePath(); ctx.fill();
+
+  // lofted sedan: cross-sections along the car → quads; cull back faces, light by normal, paint far → near
+  const SEC = [ // x, half-width, shoulder z, roof half-width, roof z, floor z
+    [-2.10,.80,.74,.62,.74,.36],[-2.00,.90,.86,.70,.86,.30],[-1.55,.93,.92,.72,.92,.28],
+    [-1.05,.93,.92,.64,1.05,.28],[-0.45,.93,.92,.62,1.40,.28],[0.45,.93,.92,.62,1.40,.28],
+    [1.05,.93,.92,.70,.96,.28],[1.15,.93,.90,.76,.90,.28],[2.20,.91,.84,.72,.84,.30],[2.48,.82,.68,.66,.68,.38]
+  ].map(([x,w,zb,rw,zr,zl])=>({x,w,zb,rw,zr,zl,
+    P:[[-.82*w,zl],[-w,zl+.45*(zb-zl)],[-.94*w,zb],[-rw,zr],[rw,zr],[.94*w,zb],[w,zl+.45*(zb-zl)],[.82*w,zl]]}));
+  const PAINT='#2f6db8', GLASS='#13243d', DARK='#0c0f13';
+  const faces = [];
+  const addFace = (P, col, ctr, bias)=>faces.push({P,col,ctr,bias:bias||0});
+  for (let i=0;i<SEC.length-1;i++){
+    const A=SEC[i], B=SEC[i+1], dx=B.x-A.x;
+    const raised = S=>S.zr > S.zb+.03;
+    for (let e=0;e<7;e++){
+      if (e===7) continue;
+      let col = PAINT;
+      if (e===2||e===4) col = (raised(A)&&raised(B)) ? GLASS : PAINT;
+      if (e===3 && (raised(A)||raised(B)) && Math.abs(B.zr-A.zr)/dx>.3) col = GLASS;
+      if (e===0||e===6) col = '#1f4c86';
+      const q=(S,k)=>[S.x,S.P[k][0],S.P[k][1]];
+      addFace([q(A,e),q(B,e),q(B,e+1),q(A,e+1)], col, [ (A.x+B.x)/2, 0, .7 ]);
+    }
+  }
+  // rear cap + taillights, front cap + headlights
+  const R=SEC[0], Fr=SEC[SEC.length-1];
+  addFace(R.P.map(([y,z])=>[R.x,y,z]), '#26558f', [R.x+1,0,.7]);
+  addFace(Fr.P.map(([y,z])=>[Fr.x,y,z]), '#2a5fa5', [Fr.x-1,0,.7]);
+  for (const [y0,y1] of [[-.76,-.30],[.30,.76]]){
+    addFace([[R.x-.012,y0,.50],[R.x-.012,y1,.50],[R.x-.012,y1,.62],[R.x-.012,y0,.62]], '#ff3b47', [R.x+1,0,.7], -1);
+    addFace([[Fr.x+.012,y0,.52],[Fr.x+.012,y1,.52],[Fr.x+.012,y1,.60],[Fr.x+.012,y0,.60]], '#ffe9b0', [Fr.x-1,0,.7], -1);
+  }
+  // wheels: 12-sided prisms tucked under the arches
+  for (const fx of [-1.35,1.45]) for (const sg of [-1,1]){
+    const yi = sg*0.70, yo = sg*0.95, N=12, rad=.34, zc=.34;
+    const ring = y => Array.from({length:N},(_,k)=>[fx+rad*Math.cos(2*Math.PI*k/N), y, zc+rad*Math.sin(2*Math.PI*k/N)]);
+    const ri=ring(yi), ro=ring(yo);
+    addFace(ro, '#171b21', [fx,yo-sg,zc], .5);
+    for (let k=0;k<N;k++) addFace([ri[k],ri[(k+1)%N],ro[(k+1)%N],ro[k]], DARK, [fx,(yi+yo)/2,zc], .5);
+  }
+  const LIGHT = (()=>{ const l=[-.35,.35,.85], n=Math.hypot(...l); return l.map(v=>v/n); })();
+  const shade = (hex,k)=>{ const n=parseInt(hex.slice(1),16);
+    const c=[(n>>16)&255,(n>>8)&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(v*k)))); return `rgb(${c})`; };
+  const list = [];
+  for (const F of faces){
+    const L = F.P;
+    // local-frame normal from the first three points, flipped to point away from the face's inner reference point
+    const u=[L[1][0]-L[0][0],L[1][1]-L[0][1],L[1][2]-L[0][2]], v=[L[2][0]-L[0][0],L[2][1]-L[0][1],L[2][2]-L[0][2]];
+    let n=[u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];
+    const nl=Math.hypot(...n)||1; n=n.map(t=>t/nl);
+    const m=[0,1,2].map(k=>L.reduce((t,q)=>t+q[k],0)/L.length);
+    if (n[0]*(m[0]-F.ctr[0])+n[1]*(m[1]-F.ctr[1])+n[2]*(m[2]-F.ctr[2]) < 0) n=n.map(t=>-t);
+    const mw = pt(m[0],m[1],m[2]);
+    const nx = n[0]*cth - n[1]*sth, ny = n[0]*sth + n[1]*cth, nz = n[2];
+    if (nx*(cam.x-mw.wx) + ny*(cam.y-mw.wy) + nz*(camH-m[2]) <= 0) continue;
+    const lit = Math.max(0, nx*0.0 + ny*0.0 + nz*LIGHT[2] + (nx*LIGHT[0] + ny*LIGHT[1]));
+    const k = F.col===GLASS ? 0.8+0.5*lit : F.col==='#ff3b47'||F.col==='#ffe9b0' ? 1.1 : 0.55+0.6*lit;
+    list.push({P:L.map(([a,b,c])=>pt(a,b,c)), c:shade(F.col,k),
+               d: Math.hypot(cam.x-mw.wx, cam.y-mw.wy, camH-m[2]) + F.bias});
+  }
+  list.sort((a,b)=>b.d-a.d);
+  ctx.lineJoin = 'round';
+  for (const F of list){
+    ctx.fillStyle = F.c; ctx.strokeStyle = F.c; ctx.lineWidth = 0.6;
+    ctx.beginPath(); F.P.forEach((q,k)=>k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+
+  /* heading handle: a knob a few metres ahead of the car, on the car's own heading */
+  const kp = pt(7,0,0.9), top = pt(0,0,1.4);
+  carScr.hx = kp.x; carScr.hy = kp.y; carScr.kz = kp.z;
+  const hot = rotating || hoverHandle;
   ctx.save();
-  ctx.translate(sc.x, sc.y);
-  ctx.rotate(state.psi*0.55);
-  // shadow
-  ctx.fillStyle = 'rgba(0,0,0,.45)';
-  ctx.beginPath(); ctx.ellipse(0, h*0.06, w*0.62, h*0.14, 0, 0, Math.PI*2); ctx.fill();
-  // wheels
-  ctx.fillStyle = '#0c0f13';
-  ctx.fillRect(-w*0.52,-h*0.28, w*0.14, h*0.34);
-  ctx.fillRect( w*0.38,-h*0.28, w*0.14, h*0.34);
-  // body
-  const bg = ctx.createLinearGradient(0,-h,0,0);
-  bg.addColorStop(0,'#3b7ecb'); bg.addColorStop(1,'#1d4a86');
-  ctx.fillStyle = bg;
-  roundRect(-w/2, -h*0.62, w, h*0.62, w*0.09); ctx.fill();
-  // cabin + rear glass
-  ctx.fillStyle = '#12233c';
-  roundRect(-w*0.36, -h*1.02, w*0.72, h*0.5, w*0.08); ctx.fill();
-  ctx.fillStyle = '#69a4d8';
-  roundRect(-w*0.30, -h*0.97, w*0.60, h*0.30, w*0.06); ctx.fill();
-  // taillights
-  ctx.fillStyle = '#ff3b47';
-  ctx.fillRect(-w*0.46,-h*0.52, w*0.20, h*0.10);
-  ctx.fillRect( w*0.26,-h*0.52, w*0.20, h*0.10);
+  ctx.strokeStyle = hot ? '#ffb454' : 'rgba(255,180,84,.6)';
+  ctx.fillStyle = hot ? '#ffb454' : 'rgba(255,180,84,.2)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(top.x,top.y); ctx.lineTo(kp.x,kp.y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(kp.x,kp.y,9,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  for (const sg of [-1,1]){            // ‹ › hints: drag sideways
+    ctx.beginPath(); ctx.moveTo(kp.x+sg*20,kp.y-5); ctx.lineTo(kp.x+sg*26,kp.y); ctx.lineTo(kp.x+sg*20,kp.y+5); ctx.stroke();
+  }
+  if (hot){
+    ctx.fillStyle = '#ffb454'; ctx.font = '11px ui-monospace,Menlo,monospace'; ctx.textAlign = 'left';
+    ctx.fillText('ψe ' + (state.psi*180/Math.PI).toFixed(1) + '°', kp.x+34, kp.y+4);
+  }
   ctx.restore();
 }
 function roundRect(x,y,w,h,r){
@@ -720,7 +799,7 @@ function drawSceneTop(){
   const carH = p.h + state.psi;                 // global heading
   const rot = -(carH - ch);                     // canvas rotation (cw positive)
   const cwid = 1.84*ppm, clen = 4.35*ppm;
-  carScr = { cx: sc.x, cy: sc.y, rx: cwid/2+26, ry: clen/2+26, pxPerM: ppm };
+  carScr = { cx: sc.x, cy: sc.y, rx: cwid/2+26, ry: clen/2+26, pxPerM: ppm, top: true, chase: false, hx: 0, hy: 0, ch };
 
   ctx.save();
   ctx.translate(sc.x, sc.y);
@@ -752,6 +831,28 @@ function drawSceneTop(){
   ctx.fillStyle = '#ff3b47';
   ctx.fillRect(-cwid*0.40, clen/2-4, cwid*0.20, 3);
   ctx.fillRect( cwid*0.20, clen/2-4, cwid*0.20, 3);
+  ctx.restore();
+
+  /* heading handle: drag the knob ahead of the nose to rotate the car */
+  const hd = clen/2 + 30;
+  const hx = sc.x + Math.sin(rot)*hd, hy = sc.y - Math.cos(rot)*hd;
+  carScr.hx = hx; carScr.hy = hy;
+  const hot = rotating || hoverHandle;
+  ctx.save();
+  ctx.strokeStyle = hot ? '#ffb454' : 'rgba(255,180,84,.55)';
+  ctx.fillStyle = hot ? '#ffb454' : 'rgba(255,180,84,.18)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(sc.x + Math.sin(rot)*(clen/2+2), sc.y - Math.cos(rot)*(clen/2+2)); ctx.lineTo(hx,hy); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(hx,hy,9,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  // little curved arrows either side of the knob hint at rotation
+  ctx.beginPath(); ctx.arc(sc.x,sc.y,hd,-Math.PI/2+rot-0.35,-Math.PI/2+rot-0.17); ctx.stroke();
+  ctx.beginPath(); ctx.arc(sc.x,sc.y,hd,-Math.PI/2+rot+0.17,-Math.PI/2+rot+0.35); ctx.stroke();
+  if (hot){
+    ctx.fillStyle = '#ffb454'; ctx.font = '11px ui-monospace,Menlo,monospace'; ctx.textAlign = 'left';
+    ctx.fillText('ψe ' + (state.psi*180/Math.PI).toFixed(1) + '°', hx+14, hy+4);
+  }
   ctx.restore();
 }
 
@@ -798,6 +899,7 @@ function drawBanner(){
   const e = Math.abs(state.e);
   let txt='CENTERED', col='#55d87f';
   if (dragging){ txt='MANUAL DISTURBANCE'; col='#5ad4c6'; }
+  else if (rotating){ txt='HEADING DISTURBANCE'; col='#5ad4c6'; }
   else if (e > LANE_HALF + CAR_HALF){ txt='OFF LANE'; col='#ff4d5e'; }
   else if (e > LANE_HALF - CAR_HALF){ txt='CROSSING LANE EDGE'; col='#ff4d5e'; }
   else if (e > 0.9){ txt='DRIFTING'; col='#ffb454'; }
@@ -1029,11 +1131,35 @@ $('btnNudge').addEventListener('click', ()=>{
 
 /* ---- drag the car sideways to disturb it ---- */
 let dragStartX = 0, dragStartE = 0;
+// point the car's nose at the pointer: heading error = pointer bearing vs road heading
+function setHeading(mx,my){
+  if (carScr.chase){
+    // pointer → world point on the knob's depth plane → bearing from the car = new heading
+    const c = carScr.cam, z = carScr.kz, lx = (W/2 - mx)*z/carScr.f;
+    const wx = c.x + z*Math.cos(c.h) - lx*Math.sin(c.h), wy = c.y + z*Math.sin(c.h) + lx*Math.cos(c.h);
+    const p = poseAt(state.s);
+    let psi = Math.atan2(wy - carScr.cwy, wx - carScr.cwx) - p.h;
+    psi = Math.atan2(Math.sin(psi), Math.cos(psi));
+    state.psi = Math.max(-0.6, Math.min(0.6, psi)); state.psid = 0;
+    return;
+  }
+  const rot = Math.atan2(mx-carScr.cx, -(my-carScr.cy));   // canvas rotation, cw positive
+  const p = poseAt(state.s), ch = carScr.ch;
+  let psi = ch - rot - p.h;
+  psi = Math.atan2(Math.sin(psi), Math.cos(psi));
+  state.psi = Math.max(-0.6, Math.min(0.6, psi));
+  state.psid = 0;
+}
 const overCar = (mx,my) => Math.abs(mx-carScr.cx) < carScr.rx && Math.abs(my-carScr.cy) < carScr.ry;
 cv.addEventListener('pointerdown', ev => {
   const r = cv.getBoundingClientRect();
   const mx = ev.clientX - r.left, my = ev.clientY - r.top;
-  if (overCar(mx,my)){
+  if (carScr.top && Math.hypot(mx-carScr.hx, my-carScr.hy) < 18){
+    rotating = true; setHeading(mx,my);
+    cv.setPointerCapture(ev.pointerId);
+    cv.style.cursor = 'grabbing';
+    ev.preventDefault();
+  } else if (overCar(mx,my)){
     dragging = true; dragStartX = mx; dragStartE = state.e;
     cv.setPointerCapture(ev.pointerId);
     cv.style.cursor = 'grabbing';
@@ -1043,15 +1169,21 @@ cv.addEventListener('pointerdown', ev => {
 cv.addEventListener('pointermove', ev => {
   const r = cv.getBoundingClientRect();
   const mx = ev.clientX - r.left, my = ev.clientY - r.top;
-  if (dragging){
+  if (rotating){
+    setHeading(mx,my);
+  } else if (dragging){
     // screen +x is world-right ⇒ e (positive-left) decreases as you drag right
     state.e = Math.max(-4.9, Math.min(4.9, dragStartE + (dragStartX - mx)/carScr.pxPerM));
     state.ed = 0;
   } else {
-    cv.style.cursor = overCar(mx,my) ? 'grab' : 'default';
+    hoverHandle = carScr.top && Math.hypot(mx-carScr.hx, my-carScr.hy) < 18;
+    cv.style.cursor = hoverHandle ? 'grab' : overCar(mx,my) ? 'grab' : 'default';
   }
 });
-const endDrag = ev => { if (dragging){ dragging = false; cv.style.cursor = 'grab'; } };
+const endDrag = ev => {
+  if (dragging){ dragging = false; cv.style.cursor = 'grab'; }
+  if (rotating){ rotating = false; cv.style.cursor = 'grab'; }
+};
 cv.addEventListener('pointerup', endDrag);
 cv.addEventListener('pointercancel', endDrag);
 
